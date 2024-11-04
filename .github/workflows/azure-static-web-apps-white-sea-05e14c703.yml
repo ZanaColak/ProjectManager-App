@@ -23,21 +23,24 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.20.4'
+          node-version: '21.7.1'
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Build And Deploy
+      - name: Build the App
+        run: npm run build  # Bygger appen ved at køre dit build script
+
+      - name: Deploy to Azure Static Web Apps
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WHITE_SEA_05E14C703 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/" # App kildekode sti
-          output_location: "web-build" # Expo output directory til web-build
-          app_build_command: 'npm run build' # Bygger med Expo's web export
+          app_location: "/"  # App kildekode sti
+          output_location: "dist"  # Korrekt output mappe fra Expo eksport
+          app_build_command: 'npm run build'  # Bygger med Expo's web export
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
