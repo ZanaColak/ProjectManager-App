@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",  // Make the text italic
     color: "black",  // Set text color to black
     position: "absolute",  // Position it absolutely within the header
-    left: "50%",  // Position title in the middle horizontally
+    left: "43%",  // Position title in the middle horizontally
     transform: [{ translateX: -75 }],  // Adjust position to perfectly center the title
     opacity: 0.7,  // Make the text slightly transparent (0.0 is fully transparent, 1.0 is fully opaque)
     textTransform: 'uppercase',
