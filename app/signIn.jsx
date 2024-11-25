@@ -125,6 +125,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         textTransform: "uppercase",
     },
+
     backButton: {
         paddingVertical: 10,
         paddingHorizontal: 20,
