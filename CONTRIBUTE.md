@@ -48,7 +48,7 @@ Replace <repository-url> with the URL of the repository.
 
 2. Set up the enviroment
 
-Using the command prompt on your device,, navigate into the project directory:
+Using the command prompt on your device, navigate into the project directory:
 
 ```bash
 cd .\project-manager-app
@@ -64,16 +64,18 @@ git pull origin <branchname>
 ```
 
 4. Check the project status if needed.
+   
    - Review the **open issues** or **active pull requests** in the repository. Check the **Issues** and **Pull Requests** tabs.
      
 5. Start developing!
+   
 Run the app locally to ensure it's working as expected_
 ```bash
 npx expo
 ```
+
 ❗ Make sure to work on a new branch to avoid conflicts.
    
-
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
