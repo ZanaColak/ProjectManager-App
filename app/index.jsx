@@ -1,193 +1,139 @@
-import { Text, View, TouchableOpacity, StyleSheet, Animated, Image } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
 
-export default function Index() {
+export default function SignIn() {
+  const [selectedDepartment, setSelectedDepartment] = useState("");
   const router = useRouter();
 
-  // Create animated values for each image opacity
-  const fadeAnim1 = useRef(new Animated.Value(0)).current;
-  const fadeAnim2 = useRef(new Animated.Value(0)).current;
-  const fadeAnim3 = useRef(new Animated.Value(0)).current;
-
-  // Array of images to cycle through
-  const images = [
-    require('../assets/images/homepage.webp'),
-    require('../assets/images/blomst.webp'),
-    require('../assets/images/Laboratorie_glas.webp'),
+  // Liste over afdelinger
+  const departments = [
+    { label: "Fuglebakken", value: "Fuglebakken" },
+    { label: "Bagsværd", value: "Bagsværd" },
+    { label: "Kalundborg", value: "Kalundborg" },
   ];
 
-  useEffect(() => {
-    // Function to handle the image fade animation
-    const startImageFade = () => {
-      Animated.sequence([
-        Animated.timing(fadeAnim1, {
-          toValue: 1,  // Fade in first image
-          duration: 3000,  // Duration for fade in
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim1, {
-          toValue: 0,  // Fade out first image
-          duration: 3000,  // Duration for fade out
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim2, {
-          toValue: 1,  // Fade in second image
-          duration: 3000,  // Duration for fade in
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim2, {
-          toValue: 0,  // Fade out second image
-          duration: 3000,  // Duration for fade out
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim3, {
-          toValue: 1,  // Fade in third image
-          duration: 3000,  // Duration for fade in
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim3, {
-          toValue: 0,  // Fade out third image
-          duration: 3000,  // Duration for fade out
-          useNativeDriver: true,
-        }),
-      ]).start();
-    };
-
-    startImageFade();  // Start the fade animation on mount
-
-    // Optional: restart animation after one cycle
-    const interval = setInterval(() => {
-      startImageFade();
-    }, 15000); // Start a new animation every 15 seconds
-
-    return () => clearInterval(interval);  // Cleanup the interval on unmount
-  }, [fadeAnim1, fadeAnim2, fadeAnim3]);
+  const handleConfirmSelection = () => {
+    if (selectedDepartment) {
+      router.push(`/dashboard?department=${selectedDepartment}`);
+    } else {
+      alert("Please select a department.");
+    }
+  };
 
   return (
-      <View style={styles.container}>
-        {/* Header with logo and Project Manager Title */}
-        <View style={styles.header}>
-          <Image
-              source={require('../assets/images/novonesis.png')} // Ensure path is correct
-              style={styles.logo}
-          />
-          <Text style={styles.headerTitle}>Project Management</Text>
-        </View>
+    <View style={styles.container}>
+      <Text style={styles.headerText}>Vælg afdeling</Text>
 
-        {/* Animated images */}
-        <Animated.Image
-            source={images[0]}
-            style={[styles.image, { opacity: fadeAnim1 }]}  // Fade in/out first image
-        />
-        <Animated.Image
-            source={images[1]}
-            style={[styles.image, { opacity: fadeAnim2 }]}  // Fade in/out second image
-        />
-        <Animated.Image
-            source={images[2]}
-            style={[styles.image, { opacity: fadeAnim3 }]}  // Fade in/out third image
-        />
-
-        {/* Overlay text container */}
-        <View style={styles.overlayTextContainer}>
-          <Text style={styles.textAboveButton}>
-            The time for <Text style={styles.textHighlight}>biosolutions is now</Text>
-          </Text>
-
-          {/* Login button placed below the text */}
-          <TouchableOpacity
-              style={styles.buttonContainer}
-              onPress={() => router.push("/signIn")}
-          >
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.dropdownContainer}>
+        <Picker
+          selectedValue={selectedDepartment}
+          onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Vælg en afdeling" value="" />
+          {departments.map((department, index) => (
+            <Picker.Item
+              key={index}
+              label={department.label}
+              value={department.value}
+            />
+          ))}
+        </Picker>
       </View>
+
+      <TouchableOpacity style={styles.button} onPress={handleConfirmSelection}>
+        <Text style={styles.buttonText}>Bekræft valg</Text>
+      </TouchableOpacity>
+
+      {selectedDepartment ? (
+        <Text style={styles.selectionText}>
+          Du har valgt: {selectedDepartment}
+        </Text>
+      ) : null}
+
+      {/* Firkantet boks i bunden */}
+      <View style={styles.bottomBox}>
+        <Text style={styles.boxText}>
+          Copyright © 2024 Novozymes A/S, part of Novonesis Group
+        </Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
-    backgroundColor: "#bfe6c4",
-    position: "relative",
-  },
-  header: {
-    position: "absolute",
-    top: 10,  // Adjust top position to give some space from the top edge
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",  // Space out logo and title
-    alignItems: "center",
-    zIndex: 40, // Ensure header is above other elements
-    padding: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    fontStyle: "italic",  // Make the text italic
-    color: "black",  // Set text color to black
-    position: "absolute",  // Position it absolutely within the header
-    left: "43%",  // Position title in the middle horizontally
-    transform: [{ translateX: -75 }],  // Adjust position to perfectly center the title
-    opacity: 0.7,  // Make the text slightly transparent (0.0 is fully transparent, 1.0 is fully opaque)
-    textTransform: 'uppercase',
-  },
-
-  logo: {
-    width: 100,  // Adjust logo size
-    height: 80, // Adjust logo size
-  },
-  image: {
-    width: "100%",  // Full width
-    height: 400,    // Full height (same size as current image)
-    resizeMode: "cover",  // Ensure images cover the space without distortion
-    position: "absolute", // Ensure images overlap each other
-  },
-  overlayTextContainer: {
-    position: "absolute", // Ensures text is on top of the image
-    top: "40%",           // Adjust for centering
-    left: 20,
-    right: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  textAboveButton: {
-    fontSize: 28,  // Adjusted size for better fit
-    fontWeight: "bold",
-    color: "white",
-    textAlign: "center",
-    marginBottom: 20,  // Space between text and button
-  },
-  textHighlight: {
-    backgroundColor: "rgba(0, 122, 255, 0.7)", // Blue background
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    color: "white",
-  },
-  buttonContainer: {
-    paddingVertical: 10,
+    backgroundColor: "#f8f9fa",
     paddingHorizontal: 20,
-    borderRadius: 5,
+    paddingTop: 80,
+  },
+  headerText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#333",
+  },
+  dropdownContainer: {
+    width: "100%",
+    maxWidth: 350,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    marginBottom: 20,
+  },
+  picker: {
+    width: "100%",
+    height: 50,
+  },
+  selectionText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: "#555",
+    textAlign: "center",
+  },
+  button: {
+    paddingVertical: 6,
+    paddingHorizontal: 15,
+    backgroundColor: "#173630",
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
+    marginBottom: 20,
   },
-
   buttonText: {
-    color: "white",
-    fontSize: 18,
+    color: "#fff",
+    fontSize: 15,
     fontWeight: "bold",
-    fontFamily: "Roboto",  // Applying a modern, clean font
-    textTransform: 'uppercase',  // Makes the text uppercase
+    textTransform: "uppercase",
+  },
+  // Firkantet boks i bunden
+  bottomBox: {
+    width: "100%",
+    height: 70,
+    backgroundColor: "#173630",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+    bottom: 0,
+  },
+  boxText: {
+    color: "#fff",
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: "center",
+    fontFamily: "RaleGroteskBase",
   },
 });
