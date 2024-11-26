@@ -1,7 +1,7 @@
 import {Text, View, TextInput, StyleSheet, Alert, Button} from "react-native";  // Import Image from react-native
-import { useRouter } from "expo-router";
-import { auth } from "./firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {useRouter} from "expo-router";
+import {auth} from "./firebase";
+import {signInWithEmailAndPassword} from "firebase/auth";
 import React, {useState} from "react";
 
 export default function SignIn() {
@@ -16,7 +16,7 @@ export default function SignIn() {
             const uid = userCredential.user.uid;
 
 
-            router.push({pathname: "/dashboard", params:{ uid }});
+            router.push({pathname: "/dashboard", params: {uid}});
         } catch (error) {
             Alert.alert("Error", error.message);
         }
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor:'#fff'
+        backgroundColor: '#fff'
     },
 
     header: {
