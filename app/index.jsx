@@ -1,70 +1,59 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { Text, View, TextInput, StyleSheet, Alert, Button } from "react-native"; // Import Image from react-native
 import { useRouter } from "expo-router";
+import { auth } from "./firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useState } from "react";
 
 export default function SignIn() {
-  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const router = useRouter();
 
-  // Liste over afdelinger
-  const departments = [
-    { label: "Fuglebakken", value: "Fuglebakken" },
-    { label: "Bagsværd", value: "Bagsværd" },
-    { label: "Kalundborg", value: "Kalundborg" },
-  ];
+  const signIn = async () => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      Alert.alert("Sign In Successful");
+      const uid = userCredential.user.uid;
 
-  const handleConfirmSelection = () => {
-    if (selectedDepartment) {
-      router.push(`/dashboard?department=${selectedDepartment}`);
-    } else {
-      alert("Please select a department.");
+      router.push({ pathname: "/department", params: { uid } });
+    } catch (error) {
+      Alert.alert("Error", error.message);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerText}>Vælg afdeling</Text>
+      <View style={styles.header}>
+        <Text style={styles.text}>Sign In</Text>
 
-      <View style={styles.dropdownContainer}>
-        <Picker
-          selectedValue={selectedDepartment}
-          onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
-          style={styles.picker}
-        >
-          <Picker.Item label="Vælg en afdeling" value="" />
-          {departments.map((department, index) => (
-            <Picker.Item
-              key={index}
-              label={department.label}
-              value={department.value}
-            />
-          ))}
-        </Picker>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <View style={styles.buttonContainer}>
+            <Button title="Sign In" onPress={signIn} color={"#173630"} />
+          </View>
+        </View>
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleConfirmSelection}>
-        <Text style={styles.buttonText}>Bekræft valg</Text>
-      </TouchableOpacity>
-
-      {selectedDepartment ? (
-        <Text style={styles.selectionText}>
-          Du har valgt: {selectedDepartment}
-        </Text>
-      ) : null}
-
-      {/* Firkantet boks i bunden */}
-      <View style={styles.bottomBox}>
-        <Text style={styles.boxText}>
-          Copyright © 2024 Novozymes A/S, part of Novonesis Group
-        </Text>
-      </View>
+      <View style={styles.bottomContainer}></View>
     </View>
   );
 }
@@ -72,68 +61,51 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "flex-start",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    paddingHorizontal: 20,
-    paddingTop: 80,
-  },
-  headerText: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#333",
-  },
-  dropdownContainer: {
-    width: "100%",
-    maxWidth: 350,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    justifyContent: "center",
     backgroundColor: "#fff",
-    marginBottom: 20,
   },
-  picker: {
-    width: "100%",
-    height: 50,
-  },
-  selectionText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: "#555",
-    textAlign: "center",
-  },
-  button: {
-    paddingVertical: 6,
-    paddingHorizontal: 15,
-    backgroundColor: "#173630",
-    borderRadius: 8,
-    justifyContent: "center",
+
+  header: {
     alignItems: "center",
-    marginBottom: 20,
+    width: "80%",
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 15,
+
+  text: {
+    fontSize: 32,
     fontWeight: "bold",
-    textTransform: "uppercase",
+    color: "#173630",
+    marginBottom: 20,
   },
-  // Firkantet boks i bunden
-  bottomBox: {
+
+  inputContainer: {
+    width: "50%",
+    marginBottom: 20,
+  },
+
+  input: {
     width: "100%",
-    height: 70,
-    backgroundColor: "#173630",
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 11,
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 10,
+    backgroundColor: "#ededed",
+    color: "#000000",
+  },
+
+  buttonContainer: {
+    width: "100%",
+    borderRadius: 5,
+    overflow: "hidden",
+  },
+
+  bottomContainer: {
+    width: "100%",
+    height: "15%",
     position: "absolute",
     bottom: 0,
-  },
-  boxText: {
-    color: "#fff",
-    fontSize: 14,
-    lineHeight: 18,
-    textAlign: "center",
-    fontFamily: "RaleGroteskBase",
+    backgroundColor: "#173630",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
