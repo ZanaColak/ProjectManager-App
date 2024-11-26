@@ -1,135 +1,114 @@
-import {
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native"; // Import Image from react-native
-import { useRouter } from "expo-router";
-import React from "react";
+import {Text, View, TextInput, StyleSheet, Alert, Button} from "react-native";  // Import Image from react-native
+import {useRouter} from "expo-router";
+import {auth} from "./firebase";
+import {signInWithEmailAndPassword} from "firebase/auth";
+import React, {useState} from "react";
 
 export default function SignIn() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const router = useRouter();
 
+  const signIn = async () => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      Alert.alert("Sign In Successful");
+      const uid = userCredential.user.uid;
+
+
+      router.push({pathname: "/dashboard", params: {uid}});
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Header with logo and title */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Proceed to Dashboard</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+
+          <Text style={styles.text}>Sign In</Text>
+
+          <View style={styles.inputContainer}>
+
+            <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+            />
+
+            <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+            />
+
+            <View style={styles.buttonContainer}>
+              <Button title="Sign In" onPress={signIn} color={'#173630'}/>
+            </View>
+
+          </View>
+        </View>
+        <View style={styles.bottomContainer}>
+
+        </View>
       </View>
-
-      {/* Background image under all content */}
-      {/* Input fields */}
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#888"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#888"
-        secureTextEntry={true}
-      />
-
-      {/* Buttons */}
-      <TouchableOpacity
-        style={styles.buttonContainer}
-        onPress={() => alert("Logged in successfully!")}
-      >
-        <Text style={styles.buttonText}>Sign In</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.push("/")}
-      >
-        <Text style={styles.buttonText}>Back to Home</Text>
-      </TouchableOpacity>
-    </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#bfe6c4", // Background color for the container
-    paddingHorizontal: 20,
-    position: "relative",
-  },
-  backgroundImage: {
-    width: "100%", // Full width
-    height: 400, // Full height (same size as current image)
-    resizeMode: "cover", // Ensure images cover the space without distortion
-    position: "absolute", // Ensure images overlap each other
-  },
-  backgroundImageStyle: {
-    resizeMode: "cover", // Ensures the image covers the entire area and is cropped if needed
-  },
-  header: {
-    position: "absolute",
-    top: 10,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    zIndex: 40,
-    padding: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    fontStyle: "italic",
-    color: "black",
-    position: "absolute",
-    left: "43%",
-    transform: [{ translateX: -75 }],
-    opacity: 0.7,
-    textTransform: "uppercase",
-  },
-  logo: {
-    width: 100,
-    height: 80,
-  },
-  input: {
-    width: "40%", // Set the input width to 40% of the screen width
-    height: 45, // Make the height more compact
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginVertical: 10,
-    fontSize: 16,
-    alignSelf: "center", // Centers the input field horizontally
-    backgroundColor: "rgba(255, 255, 255, 0.7)", // Add transparency to make the inputs stand out on top of the background
-  },
-  buttonContainer: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    backgroundColor: "#007AFF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: 10,
-    alignSelf: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    textTransform: "uppercase",
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff'
   },
 
-  backButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    backgroundColor: "#888",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 10,
-    alignSelf: "center",
+  header: {
+    alignItems: 'center',
+    width: '80%',
   },
+
+  text: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#173630',
+    marginBottom: 20,
+  },
+
+  inputContainer: {
+    width: '50%',
+    marginBottom: 20,
+  },
+
+  input: {
+    width: '100%',
+    padding: 11,
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 10,
+    backgroundColor: '#ededed',
+    color: '#000000',
+  },
+
+  buttonContainer: {
+    width: '100%',
+    borderRadius: 5,
+    overflow: 'hidden'
+  },
+
+  bottomContainer: {
+    width: '100%',
+    height: '15%',
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: '#173630',
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
