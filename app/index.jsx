@@ -1,12 +1,23 @@
-import { Text, View, TextInput, StyleSheet, Alert, Button } from "react-native"; // Import Image from react-native
+import React, { useState } from "react";
+import {
+  Text,
+  View,
+  TextInput,
+  StyleSheet,
+  Button,
+  Modal,
+  TouchableOpacity,
+  Keyboard,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { auth } from "./firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import React, { useState } from "react";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const router = useRouter();
 
   const signIn = async () => {
@@ -16,12 +27,21 @@ export default function SignIn() {
         email,
         password
       );
-      Alert.alert("Sign In Successful");
-      const uid = userCredential.user.uid;
-
-      router.push({ pathname: "/department", params: { uid } });
+      setShowErrorModal(false);
+      router.push({
+        pathname: "/department",
+        params: { uid: userCredential.user.uid },
+      });
     } catch (error) {
-      Alert.alert("Error", error.message);
+      console.error(error.code);
+      const errorMessages = {
+        "auth/user-not-found": "Ingen bruger fundet på denne email.",
+        "auth/wrong-password": "Din kode er angivet forkert.",
+      };
+      setErrorMessage(
+        errorMessages[error.code] || "Noget gik galt. Prøv igen."
+      );
+      setShowErrorModal(true);
     }
   };
 
@@ -38,22 +58,51 @@ export default function SignIn() {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            returnKeyType="next"
+            onSubmitEditing={() => this.passwordInput?.focus()} // Focus passwordfeltet
           />
 
           <TextInput
+            ref={(input) => {
+              this.passwordInput = input;
+            }} // Ref til passwordfeltet
             style={styles.input}
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              Keyboard.dismiss(); // Luk tastaturet
+              signIn(); // Kald signIn funktionen
+            }}
           />
 
           <View style={styles.buttonContainer}>
-            <Button title="Sign In" onPress={signIn} color={"#173630"} />
+            <Button title="Sign In" onPress={signIn} color="#173630" />
           </View>
         </View>
       </View>
-      <View style={styles.bottomContainer}></View>
+
+      {/* Error Modal */}
+      <Modal
+        transparent
+        visible={showErrorModal}
+        animationType="slide"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalText}>{errorMessage}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Luk</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -65,24 +114,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#fff",
   },
-
   header: {
     alignItems: "center",
     width: "80%",
   },
-
   text: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#173630",
     marginBottom: 20,
   },
-
   inputContainer: {
     width: "50%",
     marginBottom: 20,
   },
-
   input: {
     width: "100%",
     padding: 11,
@@ -92,20 +137,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#ededed",
     color: "#000000",
   },
-
   buttonContainer: {
     width: "100%",
     borderRadius: 5,
     overflow: "hidden",
   },
-
-  bottomContainer: {
-    width: "100%",
-    height: "15%",
-    position: "absolute",
-    bottom: 0,
-    backgroundColor: "#173630",
+  modalOverlay: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContainer: {
+    width: "80%",
+    padding: 20,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalText: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalButton: {
+    backgroundColor: "#173630",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
