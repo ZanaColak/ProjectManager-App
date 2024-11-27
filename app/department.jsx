@@ -3,17 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
 
-export default function SignIn() {
+export default function DepartmentSelection() {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const router = useRouter();
 
-  // Liste over afdelinger
   const departments = [
     { label: "Fuglebakken", value: "Fuglebakken" },
     { label: "Bagsværd", value: "Bagsværd" },
@@ -22,50 +21,53 @@ export default function SignIn() {
 
   const handleConfirmSelection = () => {
     if (selectedDepartment) {
-      //router.push(`/signIn?department=${selectedDepartment}`);
+      // Navigér til dashboard og send afdeling som parameter
+      router.push({
+        pathname: "/dashboard",
+        params: { department: selectedDepartment },
+      });
     } else {
-      alert("Please select a department.");
+      Alert.alert("Fejl", "Vælg venligst en afdeling.");
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerText}>Vælg afdeling</Text>
+      <View style={styles.container}>
+        <Text style={styles.headerText}>Vælg afdeling</Text>
 
-      <View style={styles.dropdownContainer}>
-        <Picker
-          selectedValue={selectedDepartment}
-          onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
-          style={styles.picker}
-        >
-          <Picker.Item label="Vælg en afdeling" value="" />
-          {departments.map((department, index) => (
-            <Picker.Item
-              key={index}
-              label={department.label}
-              value={department.value}
-            />
-          ))}
-        </Picker>
+        <View style={styles.dropdownContainer}>
+          <Picker
+              selectedValue={selectedDepartment}
+              onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
+              style={styles.picker}
+          >
+            <Picker.Item label="Vælg en afdeling" value="" />
+            {departments.map((department, index) => (
+                <Picker.Item
+                    key={index}
+                    label={department.label}
+                    value={department.value}
+                />
+            ))}
+          </Picker>
+        </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleConfirmSelection}>
+          <Text style={styles.buttonText}>Bekræft valg</Text>
+        </TouchableOpacity>
+
+        {selectedDepartment ? (
+            <Text style={styles.selectionText}>
+              Du har valgt: {selectedDepartment}
+            </Text>
+        ) : null}
+
+        <View style={styles.bottomBox}>
+          <Text style={styles.boxText}>
+            Copyright © 2024 Novozymes A/S, part of Novonesis Group
+          </Text>
+        </View>
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleConfirmSelection}>
-        <Text style={styles.buttonText}>Bekræft valg</Text>
-      </TouchableOpacity>
-
-      {selectedDepartment ? (
-        <Text style={styles.selectionText}>
-          Du har valgt: {selectedDepartment}
-        </Text>
-      ) : null}
-
-      {/* Firkantet boks i bunden */}
-      <View style={styles.bottomBox}>
-        <Text style={styles.boxText}>
-          Copyright © 2024 Novozymes A/S, part of Novonesis Group
-        </Text>
-      </View>
-    </View>
   );
 }
 
@@ -119,7 +121,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textTransform: "uppercase",
   },
-  // Firkantet boks i bunden
   bottomBox: {
     width: "100%",
     height: 70,
@@ -134,6 +135,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     textAlign: "center",
-    fontFamily: "RaleGroteskBase",
   },
 });
