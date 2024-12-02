@@ -13,7 +13,7 @@ export default function DepartmentSelection() {
         { label: "Kalender", value: "", icon: faCalendarDays },
         { label: "Tidslinje", value: "", icon: faTimeline },
         { label: "Projekt Indstillinger", value: "", icon: faBars },
-        { label: "Scrumboard", value: "", icon: faChessBoard },
+        { label: "Scrumboard", value: "scrumboard", icon: faChessBoard },
         { label: "Log Ud", value: "signOut", icon: faArrowRightFromBracket },
     ];
 
@@ -22,7 +22,7 @@ export default function DepartmentSelection() {
         if (itemValue === "signOut") {
             await signingOut(router);
         } else if (itemValue !== "") {
-            router.push(`/department/${itemValue}`);
+            router.push(`/${itemValue}`);
         }
     };
 
