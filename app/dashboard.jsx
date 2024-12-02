@@ -2,25 +2,26 @@ import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons';
-
+import { faArrowRightFromBracket, faChessBoard, faBars, faTimeline, faCalendarDays,  faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 
 export default function DepartmentSelection() {
     const [selectedDepartment, setSelectedDepartment] = useState("");
     const router = useRouter();
 
     const choice = [
-        { label: "Projekt Leder", value: "" },
-        { label: "Kalender", value: "" },
-        { label: "Tidslinje", value: "" },
-        { label: "Projekt Indstillinger", value: "" },
-        { label: "Scrumboard", value: "" },
-        { label: "Log Ud", value: "signOut" },
+        { label: "Projekt Leder", value: "", icon: faDiagramProject},
+        { label: "Kalender", value: "", icon: faCalendarDays },
+        { label: "Tidslinje", value: "", icon: faTimeline },
+        { label: "Projekt Indstillinger", value: "", icon: faBars },
+        { label: "Scrumboard", value: "", icon: faChessBoard },
+        { label: "Log Ud", value: "signOut", icon: faArrowRightFromBracket },
     ];
 
-    const handleNavigation = (itemValue) => {
+    const handleNavigation = async (itemValue) => {
         setSelectedDepartment(itemValue);
-        if (itemValue !== "") {
+        if (itemValue === "signOut") {
+            await signingOut(router);
+        } else if (itemValue !== "") {
             router.push(`/department/${itemValue}`);
         }
     };
@@ -36,9 +37,9 @@ export default function DepartmentSelection() {
                         onPress={() => handleNavigation(item.value)}
                     >
                         <View style={styles.buttonContent}>
-                            {item.value === "signOut" && (
+                            {item.icon && (
                                 <FontAwesomeIcon
-                                    icon={faArrowRightFromBracket}
+                                    icon={item.icon}
                                     size={20}
                                     color="#fff"
                                     style={styles.icon}
@@ -57,7 +58,6 @@ export default function DepartmentSelection() {
             </View>
         </View>
     );
-
 }
 
 const styles = StyleSheet.create({
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 80,
     },
-    headerText: {
+    departmentText: {
         fontSize: 22,
         fontWeight: "bold",
         marginBottom: 20,
@@ -118,5 +118,4 @@ const styles = StyleSheet.create({
     icon: {
         marginRight: 8,
     },
-
 });
