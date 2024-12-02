@@ -4,7 +4,7 @@ import { auth } from "./firebase";
 export const signingOut = async (router) => {
   try {
     await signOut(auth);
-    router.replace("/index");
+    router.replace("/");
   } catch (error) {
     console.error("Sign out error", error);
   }
