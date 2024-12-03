@@ -4,7 +4,7 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, P
 export default function Scrumboard() {
     const [columns, setColumns] = useState([
         { id: "todo", name: "Backlog", tasks: [] },
-        { id: "inprogress", name: "I gang", tasks: [] },
+        { id: "inprogress", name: "Igangværende", tasks: [] },
         { id: "review", name: "Anmeldelse", tasks: [] },
         { id: "done", name: "Færdig", tasks: [] },
         { id: "blocked", name: "Blokeret", tasks: [] },
@@ -117,6 +117,22 @@ export default function Scrumboard() {
         setSelectedTask(null);
         setMembers(""); // Reset members input field
     };
+
+    const deleteTask = () => {
+        const updatedColumns = columns.map((column) =>
+            column.id === selectedTask.columnId
+                ? {
+                    ...column,
+                    tasks: column.tasks.filter((task) => task.id !== selectedTask.id),
+                }
+                : column
+        );
+
+        setColumns(updatedColumns);
+        setModalVisible(false); // Luk modal
+        setSelectedTask(null); // Nulstil valgte opgave
+    };
+
 
     const openTaskDetails = (task) => {
         setSelectedTask(task);
@@ -240,6 +256,10 @@ export default function Scrumboard() {
                             <Text style={styles.buttonText}>Gem detaljer</Text>
                         </TouchableOpacity>
 
+                        <TouchableOpacity style={[styles.button, { backgroundColor: "red" }]} onPress={deleteTask}>
+                            <Text style={styles.buttonText}>Slet opgave</Text>
+                        </TouchableOpacity>
+
                         <TouchableOpacity onPress={() => setModalVisible(false)}>
                             <Text style={styles.closeButton}>Luk</Text>
                         </TouchableOpacity>
@@ -351,4 +371,12 @@ const styles = StyleSheet.create({
         lineHeight: 16,  // Adjusted line height for footer text
         textAlign: "center",
     },
+    buttonRed: {
+        backgroundColor: "red",
+        paddingVertical: 8,
+        borderRadius: 4,
+        width: "60%",
+        marginTop: 10,
+    },
+
 });
