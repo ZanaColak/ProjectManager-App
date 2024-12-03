@@ -10,6 +10,7 @@ export default function Scrumboard() {
         { id: "blocked", name: "Blokeret", tasks: [] },
     ]);
 
+
     const [newTask, setNewTask] = useState("");
     const [selectedTask, setSelectedTask] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
