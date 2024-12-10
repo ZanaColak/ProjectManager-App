@@ -7,6 +7,7 @@ export default function Scrumboard() {
         { id: "inprogress", name: "Igangværende", tasks: [] },
         { id: "review", name: "Anmeldelse", tasks: [] },
         { id: "done", name: "Færdig", tasks: [] },
+
         { id: "blocked", name: "Blokeret", tasks: [] },
     ]);
 
