@@ -1,247 +1,365 @@
 import React, { useState } from "react";
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList } from "react-native";
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, Picker } from "react-native";
 
 export default function Scrumboard() {
     const [columns, setColumns] = useState([
-        { id: "1", title: "BackLog", tasks: [] },
-        { id: "2", title: "To Do", tasks: [] },
-        { id: "3", title: "In Progress", tasks: [] },
-        { id: "4", title: "Review", tasks: [] },
-        { id: "5", title: "Done", tasks: [] },
+        { id: "todo", name: "Backlog", tasks: [] },
+        { id: "inprogress", name: "Igangværende", tasks: [] },
+        { id: "review", name: "Anmeldelse", tasks: [] },
+        { id: "done", name: "Færdig", tasks: [] },
+        { id: "blocked", name: "Blokeret", tasks: [] },
     ]);
+
+
     const [newTask, setNewTask] = useState("");
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
     const [dueDate, setDueDate] = useState("");
-    const [priority, setPriority] = useState("Low");
+    const [priority, setPriority] = useState("low");
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
-    const [showDatePicker, setShowDatePicker] = useState(false); // State for showing the DatePicker
+    const [selectedColumn, setSelectedColumn] = useState("todo");
+    const [members, setMembers] = useState("");
 
-    const addTask = () => {
+    // Validate time inputs
+    const validateTime = (start, end) => {
+        const startDate = new Date(`1970-01-01T${start}`);
+        const endDate = new Date(`1970-01-01T${end}`);
+        const duration = (endDate - startDate) / 1000 / 60;
+
+        if (isNaN(startDate) || isNaN(endDate)) return "Start- og sluttid er påkrævet.";
+        if (startDate >= endDate) return "Starttid skal være tidligere end sluttid.";
+        if (duration <= 0 || duration > 24 * 60) return "Total tid skal være positiv og mindre end 24 timer.";
+        return "";
+    };
+
+    const addTaskToBacklog = () => {
         if (newTask.trim() === "") {
-            setErrorMessage("Task name is required.");
+            setErrorMessage("Opgavenavn er påkrævet.");
             return;
         }
 
-        if (dueDate.trim() === "" || !validateDate(dueDate)) {
-            setErrorMessage("Valid due date is required.");
-            return;
-        }
-
-        if (!["Low", "Medium", "High"].includes(priority)) {
-            setErrorMessage("Priority must be Low, Medium, or High.");
-            return;
-        }
-
-        setErrorMessage(""); // Clear any previous error messages
-
-        const newTaskObj = {
-            id: Date.now(),
-            name: newTask,
-            dueDate: dueDate,
-            priority: priority,
-        };
-
-        setColumns((prevColumns) =>
-            prevColumns.map((col) =>
-                col.id === "1" // Default to adding new tasks to the Backlog
-                    ? { ...col, tasks: [...col.tasks, newTaskObj] }
-                    : col
-            )
+        // Check if task already exists in any column
+        const taskExists = columns.some(column =>
+            column.tasks.some(task => task.name === newTask.trim())
         );
-        setNewTask("");
-        setDueDate("");
-        setPriority("Low");
+
+        if (taskExists) {
+            setErrorMessage("Opgave med dette navn eksisterer allerede.");
+            return;
+        }
+
+        // Add task only to the "Backlog" (todo column)
+        const updatedColumns = columns.map((column) =>
+            column.id === "todo"
+                ? {
+                    ...column,
+                    tasks: [
+                        ...column.tasks,
+                        {
+                            id: Date.now().toString(),
+                            name: newTask,
+                            priority: "low",  // Default priority
+                            columnId: "todo", // Add the column ID to track where the task is
+                        },
+                    ],
+                }
+                : column
+        );
+
+        setColumns(updatedColumns);
+        setErrorMessage("");
+        setNewTask("");  // Reset the task name input field
+    };
+
+    // When saving task details after selecting a column
+    const saveTaskDetails = () => {
+        const timeError = validateTime(startTime, endTime);
+        if (timeError) {
+            setErrorMessage(timeError);
+            return;
+        }
+
+        // Remove task from the current column
+        const updatedColumns = columns.map((column) => {
+            if (column.id === selectedTask.columnId) {
+                return {
+                    ...column,
+                    tasks: column.tasks.filter((task) => task.id !== selectedTask.id),
+                };
+            }
+            return column;
+        });
+
+        // Add task to the new selected column
+        const updatedColumnsWithNewColumn = updatedColumns.map((column) =>
+            column.id === selectedColumn
+                ? {
+                    ...column,
+                    tasks: [
+                        ...column.tasks,
+                        {
+                            ...selectedTask,
+                            dueDate,
+                            priority,
+                            startTime,
+                            endTime,
+                            members,
+                            columnId: selectedColumn, // Update columnId when moving the task
+                        },
+                    ],
+                }
+                : column
+        );
+
+        setColumns(updatedColumnsWithNewColumn);
+        setModalVisible(false);
+        setSelectedTask(null);
+        setMembers(""); // Reset members input field
+    };
+
+    const deleteTask = () => {
+        const updatedColumns = columns.map((column) =>
+            column.id === selectedTask.columnId
+                ? {
+                    ...column,
+                    tasks: column.tasks.filter((task) => task.id !== selectedTask.id),
+                }
+                : column
+        );
+
+        setColumns(updatedColumns);
+        setModalVisible(false); // Luk modal
+        setSelectedTask(null); // Nulstil valgte opgave
+    };
+
+
+    const openTaskDetails = (task) => {
+        setSelectedTask(task);
+        setModalVisible(true);
     };
 
     const getPriorityColor = (priority) => {
-        switch (priority) {
-            case "Low":
-                return "#8bc34a"; // Green for Low priority
-            case "Medium":
-                return "#ffeb3b"; // Yellow for Medium priority
-            case "High":
-                return "#f44336"; // Red for High priority
-            default:
-                return "#ffffff"; // Default to white
+        if (!priority || typeof priority !== 'string') {
+            return "#D3D3D3"; // Default gray if priority is undefined or not a string
         }
-    };
 
-    const renderTask = ({ item: task }) => {
-        return (
-            <View style={styles.task}>
-                <Text style={styles.taskText}>{task.name}</Text>
-                <Text style={styles.taskDetails}>
-                    Due: {task.dueDate} | Priority: {task.priority}
-                </Text>
-            </View>
-        );
-    };
-
-    const renderColumn = ({ item }) => {
-        return (
-            <View style={styles.column}>
-                <Text style={styles.columnTitle}>{item.title}</Text>
-                <FlatList
-                    data={item.tasks}
-                    keyExtractor={(task) => task.id.toString()}
-                    renderItem={renderTask}
-                    contentContainerStyle={styles.columnTasks}
-                />
-            </View>
-        );
-    };
-
-    const handleDateChange = (event, selectedDate) => {
-        const currentDate = selectedDate || new Date();
-        setShowDatePicker(false);
-        setDueDate(currentDate.toLocaleDateString()); // Format the date as needed
-    };
-
-    const handleDateInputChange = (text) => {
-        setDueDate(text);
-    };
-
-    const validateDate = (date) => {
-        // Simple validation to check if the date is in the format dd/mm/yyyy
-        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-        return dateRegex.test(date);
+        switch (priority.toLowerCase()) {
+            case "high":
+                return "#FF6347"; // Red
+            case "medium":
+                return "#FFD700"; // Yellow
+            case "low":
+                return "#32CD32"; // Green
+            default:
+                return "#D3D3D3"; // Default gray if no recognized priority
+        }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.departmentText}>Scrumboard</Text>
+            <Text style={styles.header}>Scrumboard</Text>
 
-            <View style={styles.inputContainer}>
+            {/* Task creation form */}
+            <View style={styles.addTaskContainer}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Enter a task or user story"
+                    placeholder="Opgavenavn"
                     value={newTask}
                     onChangeText={setNewTask}
                 />
-                {errorMessage && newTask.trim() === "" && (
-                    <Text style={styles.errorText}>{errorMessage}</Text>
-                )}
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter Due Date (dd/mm/yyyy)"
-                    value={dueDate}
-                    onChangeText={handleDateInputChange}
-                />
-                {errorMessage && !validateDate(dueDate) && (
-                    <Text style={styles.errorText}>Please enter a valid date (dd/mm/yyyy)</Text>
-                )}
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Priority (Low, Medium, High)"
-                    value={priority}
-                    onChangeText={setPriority}
-                />
-                {errorMessage && !["Low", "Medium", "High"].includes(priority) && (
-                    <Text style={styles.errorText}>{errorMessage}</Text>
-                )}
-
-                <TouchableOpacity style={styles.button} onPress={addTask}>
-                    <Text style={styles.buttonText}>Add Task</Text>
+                {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+                <TouchableOpacity style={styles.button} onPress={addTaskToBacklog}>
+                    <Text style={styles.buttonText}>Tilføj opgave</Text>
                 </TouchableOpacity>
             </View>
 
-            <FlatList
-                data={columns}
-                keyExtractor={(item) => item.id}
-                horizontal
-                renderItem={renderColumn}
-                contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
-            />
+            {/* Columns */}
+            <View style={styles.board}>
+                {columns.map((column) => (
+                    <View key={column.id} style={styles.column}>
+                        <Text style={styles.columnHeader}>{column.name}</Text>
+
+                        <FlatList
+                            data={column.tasks}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity onPress={() => openTaskDetails(item)}>
+                                    <View style={[styles.taskCard, { backgroundColor: getPriorityColor(item.priority) }]} >
+                                        <Text style={styles.taskName}>{item.name}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            keyExtractor={(item) => item.id}
+                        />
+                    </View>
+                ))}
+            </View>
+
+            {/* Task details modal */}
+            {selectedTask && (
+                <Modal visible={modalVisible} animationType="slide">
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>{selectedTask.name}</Text>
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Forfaldsdato (YYYY-MM-DD)"
+                            value={dueDate}
+                            onChangeText={setDueDate}
+                        />
+                        {/* Priority selection */}
+                        <Picker
+                            selectedValue={priority}
+                            style={styles.input}
+                            onValueChange={(itemValue) => setPriority(itemValue)}
+                        >
+                            <Picker.Item label="Lav" value="low" />
+                            <Picker.Item label="Medium" value="medium" />
+                            <Picker.Item label="Høj" value="high" />
+                        </Picker>
+
+                        {/* Manual time input */}
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Starttid (HH:MM)"
+                            value={startTime}
+                            onChangeText={setStartTime}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Sluttid (HH:MM)"
+                            value={endTime}
+                            onChangeText={setEndTime}
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Medlemmer (kommasepareret)"
+                            value={members}
+                            onChangeText={setMembers}
+                        />
+
+                        {/* Column selection */}
+                        <Picker
+                            selectedValue={selectedColumn}
+                            style={styles.input}
+                            onValueChange={(itemValue) => setSelectedColumn(itemValue)}
+                        >
+                            {columns.map((column) => (
+                                <Picker.Item key={column.id} label={column.name} value={column.id} />
+                            ))}
+                        </Picker>
+
+                        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+                        <TouchableOpacity style={styles.button} onPress={saveTaskDetails}>
+                            <Text style={styles.buttonText}>Gem detaljer</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.button, { backgroundColor: "red" }]} onPress={deleteTask}>
+                            <Text style={styles.buttonText}>Slet opgave</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <Text style={styles.closeButton}>Luk</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Modal>
+            )}
 
             <View style={styles.bottomBox}>
-                <Text style={styles.boxText}>Copyright © 2024 Novozymes A/S</Text>
+                <Text style={styles.boxText}>
+                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
+                </Text>
             </View>
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: "flex-start",
         alignItems: "center",
         backgroundColor: "#f8f9fa",
-        paddingHorizontal: 20,
-        paddingTop: 80,
-        marginBottom: 70,
+        paddingHorizontal: 10,  // Reduced padding
+        paddingTop: 20,  // Adjusted top padding for more compact layout
     },
-    departmentText: {
-        fontSize: 22,
+    header: {
+        fontSize: 22,  // Reduced font size for header
         fontWeight: "bold",
-        marginBottom: 20,
-        textAlign: "center",
-        color: "#333",
+        marginBottom: 15,  // Reduced margin bottom
     },
-    inputContainer: {
-        flexDirection: "column",
-        alignItems: "center",
-        marginBottom: 20,
+    addTaskContainer: {
+        width: "100%",
+        marginBottom: 15,  // Reduced margin
+        alignItems: "center",  // Centered the task addition form
     },
     input: {
-        flex: 1,
-        width: 300,
-        borderWidth: 1,
+        height: 35,  // Reduced input field height
         borderColor: "#ccc",
-        borderRadius: 8,
-        padding: 10,
-        marginVertical: 5,
+        borderWidth: 1,
+        marginBottom: 8,  // Reduced margin
+        paddingLeft: 10,
+        borderRadius: 4,
+        width: "60%",  // Set input width to 60% of the container width
     },
     button: {
-        paddingVertical: 6,
-        paddingHorizontal: 15,
         backgroundColor: "#173630",
-        borderRadius: 8,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 20,
+        paddingVertical: 8,  // Reduced vertical padding
+        borderRadius: 4,
+        width: "60%",  // Set button width to 60% of the container width
+        marginTop: 10,  // Space between button and input field
     },
     buttonText: {
         color: "#fff",
-        fontSize: 15,
-        fontWeight: "bold",
-        textTransform: "uppercase",
+        textAlign: "center",
+        fontSize: 14,  // Reduced font size for buttons
+    },
+    errorText: {
+        color: "red",
+        fontSize: 12,  // Reduced error text size
+    },
+    board: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        width: "100%",
     },
     column: {
-        backgroundColor: "#fff",
-        padding: 10,
-        marginRight: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#ccc",
-        width: 250,
+        width: "18%",  // Reduced column width for a more compact board
+        marginRight: 8,  // Reduced margin between columns
     },
-    columnTitle: {
-        fontSize: 18,
+    columnHeader: {
+        fontSize: 16,  // Reduced font size for column headers
         fontWeight: "bold",
-        marginBottom: 10,
         textAlign: "center",
+        marginBottom: 8,  // Reduced margin bottom
     },
-    task: {
-        backgroundColor: "#e9ecef",
-        padding: 10,
-        borderRadius: 5,
-        marginBottom: 5,
+    taskCard: {
+        padding: 8,  // Reduced padding inside task cards
+        borderRadius: 4,
+        marginBottom: 8,  // Reduced margin between task cards
     },
-    taskText: {
-        fontSize: 14,
+    taskName: {
+        fontSize: 14,  // Reduced font size for task names
+        color: "#fff",
     },
-    taskDetails: {
-        fontSize: 12,
-        color: "#666",
+    modalContent: {
+        flex: 1,
+        padding: 15,  // Reduced padding inside modal
     },
-    columnTasks: {
-        marginTop: 10,
+    modalTitle: {
+        fontSize: 18,  // Reduced font size for modal title
+        fontWeight: "bold",
+        marginBottom: 8,  // Reduced margin bottom
+    },
+    closeButton: {
+        color: "blue",
+        marginTop: 15,  // Reduced margin top for close button
     },
     bottomBox: {
         width: "100%",
-        height: 70,
+        height: 60,  // Reduced height of footer
         backgroundColor: "#173630",
         justifyContent: "center",
         alignItems: "center",
@@ -250,13 +368,16 @@ const styles = StyleSheet.create({
     },
     boxText: {
         color: "#fff",
-        fontSize: 15,
-        lineHeight: 18,
+        fontSize: 14,  // Reduced font size for footer text
+        lineHeight: 16,  // Adjusted line height for footer text
         textAlign: "center",
     },
-    errorText: {
-        color: "red",
-        fontSize: 12,
-        marginTop: 5,
+    buttonRed: {
+        backgroundColor: "red",
+        paddingVertical: 8,
+        borderRadius: 4,
+        width: "60%",
+        marginTop: 10,
     },
+
 });
