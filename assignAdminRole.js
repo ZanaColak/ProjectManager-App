@@ -1,3 +1,4 @@
+/*
 const admin = require("firebase-admin");
 const serviceAccount = require("./serviceAccountKey.json");
 
@@ -23,3 +24,4 @@ const assignAdminRole = async (uid) => {
 };
 
 assignAdminRole("P5sLltcuudRgqaqR3XcGlTqWsWr1");
+*/
