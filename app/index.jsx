@@ -1,17 +1,9 @@
 import React, { useState } from "react";
-import {
-  Text,
-  View,
-  TextInput,
-  StyleSheet,
-  Button,
-  Modal,
-  TouchableOpacity,
-  Keyboard,
-} from "react-native";
+import {Text, View, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard} from "react-native";
 import { useRouter } from "expo-router";
 import { auth } from "./firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { getUserRole, ensureDefaultRole } from "./firebase";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -23,87 +15,104 @@ export default function SignIn() {
   const signIn = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+          auth, email, password);
+
+      const uid = userCredential.user.uid;
+
+      // Ensure user has a role in Firestore (create if missing)
+      await ensureDefaultRole(uid, userCredential.user.email);
+
+      // Fetch the role from Firestore
+      const role = await getUserRole(uid);
+
+
+      if (role === "admin") {
+        router.push({
+          pathname: "/department",
+          params: { uid },
+        });
+      } else if (role === "member") {
+        router.push({
+          pathname: "/department",
+          params: { uid },
+        });
+      } else {
+        throw new Error("Invalid role detected. Contact support.");
+      }
+
       setShowErrorModal(false);
-      router.push({
-        pathname: "/department",
-        params: { uid: userCredential.user.uid },
-      });
     } catch (error) {
-      console.error(error.code);
+      console.error("Sign-in error:", error);
       const errorMessages = {
         "auth/user-not-found": "Ingen bruger fundet på denne email.",
         "auth/wrong-password": "Din kode er angivet forkert.",
       };
       setErrorMessage(
-        errorMessages[error.code] || "Noget gik galt. Prøv igen."
+          errorMessages[error.code] || "Noget gik galt. Prøv igen."
       );
       setShowErrorModal(true);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.text}>Sign In</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.text}>Sign In</Text>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            returnKeyType="next"
-            onSubmitEditing={() => this.passwordInput?.focus()} // Focus passwordfeltet
-          />
+          <View style={styles.inputContainer}>
+            <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={() => this.passwordInput?.focus()}
+            />
 
-          <TextInput
-            ref={(input) => {
-              this.passwordInput = input;
-            }} // Ref til passwordfeltet
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={() => {
-              Keyboard.dismiss(); // Luk tastaturet
-              signIn(); // Kald signIn funktionen
-            }}
-          />
+            <TextInput
+                ref={(input) => {
+                  this.passwordInput = input;
+                }}
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  Keyboard.dismiss();
+                  signIn();
+                }}
+            />
 
-          <View style={styles.buttonContainer}>
-            <Button title="Sign In" onPress={signIn} color="#173630" />
+            <View style={styles.buttonContainer}>
+              <Button title="Sign In" onPress={signIn} color="#173630" />
+            </View>
           </View>
         </View>
+
+        {/* Error Modal */}
+        <Modal
+            transparent
+            visible={showErrorModal}
+            animationType="slide"
+            onRequestClose={() => setShowErrorModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalText}>{errorMessage}</Text>
+              <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setShowErrorModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Luk</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
-
-      {/* Error Modal */}
-      <Modal
-        transparent
-        visible={showErrorModal}
-        animationType="slide"
-        onRequestClose={() => setShowErrorModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalText}>{errorMessage}</Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setShowErrorModal(false)}
-            >
-              <Text style={styles.modalButtonText}>Luk</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
   );
 }
 
