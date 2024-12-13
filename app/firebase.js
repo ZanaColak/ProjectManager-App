@@ -1,13 +1,10 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
     apiKey: "AIzaSyCZPkLmX15vUa1baJn7Ghh6zVHNyHDpzbQ",
     authDomain: "projectmaneger-novonesis.firebaseapp.com",
@@ -20,8 +17,35 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const database = getFirestore(app)
-const storage = getStorage(app)
+const database = getFirestore(app);
+const storage = getStorage(app);
 const auth = getAuth(app);
 
-export { app, database, storage, auth}
+// Function to ensure every user gets a default role of 'member' in Firestore
+export const ensureDefaultRole = async (uid, email) => {
+    const userRef = doc(database, "users", uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+        await setDoc(userRef, {
+            email: email,
+            role: "member", // Default role
+            createdAt: new Date(),
+        });
+    }
+};
+
+// Function to retrieve the user's role from Firestore
+export const getUserRole = async (uid) => {
+    const userRef = doc(database, "users", uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        return userSnap.data().role;
+    } else {
+        console.error("User not found in Firestore.");
+        return null;
+    }
+};
+
+export { app, database, storage, auth };
