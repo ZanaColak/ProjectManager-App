@@ -1,67 +1,50 @@
 import React, { useState, useEffect } from "react";
-import { useRouter } from "expo-router";
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import {View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator} from "react-native";
+import { doc, getDoc } from "firebase/firestore";
+import { database, auth } from "./firebase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {faArrowRightFromBracket, faChessBoard, faBars, faTimeline, faCalendarDays, faDiagramProject,} from "@fortawesome/free-solid-svg-icons";
-import { auth } from "./firebase";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {faChessBoard, faBars, faTimeline, faCalendarDays, faDiagramProject,} from "@fortawesome/free-solid-svg-icons";
 
-const db = getFirestore();
-
-export default function DepartmentSelection() {
-    const [selectedDepartment, setSelectedDepartment] = useState("");
+export default function DepartmentSelection({ navigation }) {
     const [role, setRole] = useState(null);
+    const [selectedDepartment, setSelectedDepartment] = useState("");
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
 
-    // Fetch user role from Firestore
+    const choices = [
+        { label: "Projekt Leder", value: "leader", adminOnly: false, icon: faDiagramProject },
+        { label: "Kalender", value: "calendar", adminOnly: false, icon: faCalendarDays },
+        { label: "Tidslinje", value: "timeline", adminOnly: false, icon: faTimeline },
+        { label: "Projekt Indstillinger", value: "settings", adminOnly: true, icon: faBars },
+        { label: "Scrumboard", value: "scrumboard", adminOnly: false, icon: faChessBoard },
+    ];
+
     useEffect(() => {
-        const fetchRole = async () => {
+        const fetchUserRole = async () => {
             try {
                 const user = auth.currentUser;
                 if (user) {
-                    const userRef = doc(db, "users", user.uid);
+                    const userRef = doc(database, "users", user.uid);
                     const userSnap = await getDoc(userRef);
                     if (userSnap.exists()) {
-                        setRole(userSnap.data().role || "member"); // Default to "member" if no role
+                        setRole(userSnap.data().role || "member");
                     } else {
-                        console.error("User document not found in Firestore.");
+                        console.error("User document not found");
                         setRole("member");
                     }
                 } else {
-                    console.error("No authenticated user found.");
-                    router.replace("/signIn");
+                    console.error("No authenticated user");
+                    navigation.replace("SignIn");
                 }
             } catch (error) {
                 console.error("Error fetching user role:", error);
-                setRole("member"); // Default to "member" in case of an error
+                setRole("member");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchRole();
-    }, []);
-
-    // Choices with admin-only flag
-    const choices = [
-        { label: "Projekt Leder", value: "", adminOnly: false, icon: faDiagramProject },
-        { label: "Kalender", value: "", adminOnly: false, icon: faCalendarDays },
-        { label: "Tidslinje", value: "", adminOnly: false, icon: faTimeline },
-        { label: "Projekt Indstillinger", value: "", adminOnly: true, icon: faBars },
-        { label: "Scrumboard", value: "", adminOnly: false, icon: faChessBoard },
-        { label: "Log Ud", value: "signOut", adminOnly: false, icon: faArrowRightFromBracket },
-    ];
-
-    const handleNavigation = async (itemValue) => {
-        setSelectedDepartment(itemValue);
-        if (itemValue === "signOut") {
-            await auth.signOut();
-            router.replace("/signIn");
-        } else if (itemValue !== "") {
-            router.push(`/department/${itemValue}`);
-        }
-    };
+        fetchUserRole();
+    }, [navigation]);
 
     if (loading) {
         return (
@@ -71,38 +54,35 @@ export default function DepartmentSelection() {
         );
     }
 
+    const handleNavigation = (itemValue) => {
+        setSelectedDepartment(itemValue);
+        if (itemValue !== "") {
+            router.push(`/department/${itemValue}`);
+        }
+    };
+
     return (
         <View style={styles.container}>
-            <Text style={styles.departmentText}>Department</Text>
-            <View style={styles.buttonContainer}>
-                {/* Filter and render choices based on role */}
-                {choices
-                    .filter((item) => !item.adminOnly || role === "admin") // Filter admin-only options
-                    .map((item, index) => (
+            <Text style={styles.title}>Department</Text>
+            <ScrollView style={styles.buttonContainer}>
+                {choices.filter((item) => !item.adminOnly || role === "admin").map((item, index) => (
                         <TouchableOpacity
                             key={index}
                             style={styles.button}
                             onPress={() => handleNavigation(item.value)}
                         >
-                            <View style={styles.buttonContent}>
-                                {item.icon && (
-                                    <FontAwesomeIcon
-                                        icon={item.icon}
-                                        size={20}
-                                        color="#fff"
-                                        style={styles.icon}
-                                    />
-                                )}
-                                <Text style={styles.buttonText}>{item.label}</Text>
-                            </View>
+                            <FontAwesomeIcon
+                                icon={item.icon}
+                                size={24}
+                                color="#fff"
+                                style={styles.icon}
+                            />
+                            <Text style={styles.buttonText}>{item.label}</Text>
                         </TouchableOpacity>
                     ))}
-            </View>
-
-            <View style={styles.bottomBox}>
-                <Text style={styles.boxText}>
-                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
-                </Text>
+            </ScrollView>
+            <View style={styles.footer}>
+                <Text style={styles.footerText}>© 2024 Novozymes A/S, part of Novonesis Group</Text>
             </View>
         </View>
     );
@@ -114,56 +94,43 @@ const styles = StyleSheet.create({
         justifyContent: "flex-start",
         alignItems: "center",
         backgroundColor: "#f8f9fa",
+        paddingTop: 50,
         paddingHorizontal: 20,
-        paddingTop: 80,
     },
-    departmentText: {
-        fontSize: 22,
+    title: {
+        fontSize: 28,
         fontWeight: "bold",
-        marginBottom: 20,
-        textAlign: "center",
         color: "#333",
+        marginBottom: 20,
     },
     buttonContainer: {
-        width: "30%",
-        marginTop: 10,
+        width: "100%",
     },
     button: {
-        paddingVertical: 6,
-        paddingHorizontal: 15,
-        backgroundColor: "#173630",
-        borderRadius: 8,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 20,
-    },
-    buttonText: {
-        color: "#fff",
-        fontSize: 15,
-        fontWeight: "bold",
-        textTransform: "uppercase",
-    },
-    bottomBox: {
-        width: "100%",
-        height: 70,
-        backgroundColor: "#173630",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "absolute",
-        bottom: 0,
-    },
-    boxText: {
-        color: "#fff",
-        fontSize: 15,
-        lineHeight: 18,
-        textAlign: "center",
-    },
-    buttonContent: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        marginVertical: 10,
+        backgroundColor: "#173630",
+        borderRadius: 8,
+    },
+    buttonText: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "bold",
+        marginLeft: 10,
     },
     icon: {
-        marginRight: 8,
+        marginRight: 10,
+    },
+    footer: {
+        position: "absolute",
+        bottom: 20,
+    },
+    footerText: {
+        color: "#333",
+        fontSize: 12,
     },
 });
