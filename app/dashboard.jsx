@@ -4,6 +4,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { database, auth } from "./firebase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {faChessBoard, faBars, faTimeline, faCalendarDays, faDiagramProject,} from "@fortawesome/free-solid-svg-icons";
+import {router} from "expo-router";
 
 export default function DepartmentSelection({ navigation }) {
     const [role, setRole] = useState(null);
@@ -57,7 +58,7 @@ export default function DepartmentSelection({ navigation }) {
     const handleNavigation = (itemValue) => {
         setSelectedDepartment(itemValue);
         if (itemValue !== "") {
-            router.push(`/department/${itemValue}`);
+            router.push(`/${itemValue}`);
         }
     };
 
