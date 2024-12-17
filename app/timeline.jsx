@@ -16,8 +16,6 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
         setFilterType(type);
         if (type === "all") {
             setFilteredData([...projects, ...tasks]);
-        } else if (type === "projects") {
-            setFilteredData(projects);
         } else if (type === "tasks") {
             setFilteredData(tasks);
         } else if (type === "teamMember" && selectedTeamMember) {
@@ -40,24 +38,18 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
         setSelectedTeamMember(member);
         setIsTeamMemberModalVisible(false);
 
-        // Filtrer opgaver baseret på det valgte teammedlem
         const memberTasks = tasks.filter((task) =>
             task.assignedTo.includes(member)
         );
 
-        // Hvis der er opgaver tilknyttet, opdater filteredData
         if (memberTasks.length > 0) {
             setFilteredData(memberTasks);
         } else {
-            setFilteredData([]);  // Ingen opgaver for det valgte teammedlem
+            setFilteredData([]);
         }
 
-        // Automatisk skift til teammedlem filter
         setFilterType("teamMember");
     };
-
-
-
 
     // Generate timeline dates
     const generateTimelineDates = () => {
@@ -79,6 +71,17 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
 
     const containerHeight = Math.max(filteredData.length * 50, 120);
 
+    const handleProjectChange = (projectName) => {
+        setSelectedProject(projectName);
+        setFilterType("projectTasks");
+
+        const projectTasks = tasks.filter((task) =>
+            task.projectName === projectName
+        );
+
+        setFilteredData(projectTasks);
+    };
+
     // Render timeline dates with proper spacing
     const renderTimelineDates = () => {
         const dates = generateTimelineDates();
@@ -95,18 +98,19 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
         );
     };
 
-    // Render timeline lines for tasks/projects
+    const [timelineStartDate, setTimelineStartDate] = useState(new Date()); // Startdatoen for timelinen
+
     const renderTimelineLine = (item, index) => {
         const startDate = new Date(item.startDate);
         const endDate = new Date(item.endDate);
-        const timelineStartDate = new Date(generateTimelineDates()[0]);
-
+        const timelineStartDate = new Date(generateTimelineDates()[0]); // Første dato i timelinen
         const totalTimelineDays = generateTimelineDates().length;
 
-        // Offset calculation
+        // Beregn antal dage fra timelineens startdato til opgavernes startdato
         const offsetDays = Math.floor((startDate - timelineStartDate) / (1000 * 60 * 60 * 24));
         const durationDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
 
+        // Beregn placering og bredde af linjen som procent af total længde af timelinen
         const offset = (offsetDays / totalTimelineDays) * 100;
         const lineWidth = (durationDays / totalTimelineDays) * 100;
 
@@ -115,8 +119,8 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
                 key={index}
                 style={{
                     ...styles.timelineLine,
-                    left: `${offset}%`,
-                    width: `${lineWidth}%`,
+                    left: `${offset}%`, // Placer linjen baseret på startdatoen
+                    width: `${lineWidth}%`, // Linjens bredde afhængigt af opgavens varighed
                     top: index * 50,
                 }}
             >
@@ -136,8 +140,17 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsFilterTypeModalVisible(true)}>
                     <Text style={styles.filterLabel}>
-                        {filterType === "all" ? "Vis alle" : filterType === "projects" ? "Kun projekter" : filterType === "tasks" ? "Kun opgaver" : selectedTeamMember ? `Medlem: ${selectedTeamMember}` : "Teammedlem"}
+                        {filterType === "all"
+                            ? "Vis alle"
+                            : filterType === "tasks"
+                                ? "Kun opgaver"
+                                : filterType === "projectTasks" && selectedProject
+                                    ? `Projekt: ${selectedProject}`
+                                    : selectedTeamMember
+                                        ? `Medlem: ${selectedTeamMember}`
+                                        : "Teammedlem"}
                     </Text>
+
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsTeamMemberModalVisible(true)}>
                     <Text style={styles.filterLabel}>Teammedlem</Text>
@@ -170,8 +183,23 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
                 <View style={styles.modalBackground}>
                     <View style={styles.modalContainer}>
                         <Text style={styles.modalText} onPress={() => handleFilterChange("all")}>Vis alle</Text>
-                        <Text style={styles.modalText} onPress={() => handleFilterChange("projects")}>Kun projekter</Text>
                         <Text style={styles.modalText} onPress={() => handleFilterChange("tasks")}>Kun opgaver</Text>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal visible={isTeamMemberModalVisible} transparent animationType="fade">
+                <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                        {projects.map((project, index) => (
+                            <Text
+                                key={index}
+                                style={styles.modalText}
+                                onPress={() => handleProjectChange(project.name)}
+                            >
+                                {project.name}
+                            </Text>
+                        ))}
                     </View>
                 </View>
             </Modal>
@@ -200,9 +228,22 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
 
 export default function App() {
     const testProjects = [
-        { name: "Projekt 1", startDate: "2024-12-01T08:00:00", endDate: "2024-12-05T17:00:00", assignedTo: ["Member 1"] },
-        { name: "Projekt 2", startDate: "2024-12-03T09:00:00", endDate: "2024-12-10T18:00:00", assignedTo: ["Member 2"] },
+        {
+            id: 1,
+            name: "Projekt 1",
+            startDate: "2024-12-01T08:00:00",
+            endDate: "2024-12-05T17:00:00",
+            assignedTo: ["Member 1"]
+        },
+        {
+            id: 2,
+            name: "Projekt 2",
+            startDate: "2024-12-03T09:00:00",
+            endDate: "2024-12-10T18:00:00",
+            assignedTo: ["Member 2"]
+        }
     ];
+
 
     const testTasks = [
         { name: "Opgave 1", startDate: "2024-12-02T08:30:00", endDate: "2024-12-04T16:00:00", assignedTo: ["Member 1", "Member 2"] },
@@ -213,15 +254,15 @@ export default function App() {
 
     return (
         <View style={{ flex: 1 }}>
-            <Timeline projects={testProjects} tasks={testTasks} teamMembers={teamMembers} />
+            <Timeline tasks={testTasks} teamMembers={teamMembers} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1, // Sørger for at fylde hele skærmen
-        paddingTop: 20, // Lidt ekstra plads over headeren
+        flex: 1,
+        paddingTop: 20,
     },
     header: {
         fontSize: 24,
@@ -270,16 +311,16 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
     timelineLineContainer: {
-        flex: 1, // Fylder alt ledigt plads mellem filter og footer
+        flex: 1,
         position: "relative",
         width: "100%",
     },
     scrollContainer: {
-        flexGrow: 1, // Sørger for, at indholdet strækker sig
+        flexGrow: 1,
     },
     timelineContainer: {
         position: "relative",
-        minHeight: 500, // Sørger for højere plads til timeline
+        minHeight: 500,
     },
     timelineLine: {
         position: "absolute",
