@@ -9,8 +9,6 @@ export default function Scrumboard() {
         { id: "done", name: "Færdig", tasks: [] },
         { id: "blocked", name: "Blokeret", tasks: [] },
     ]);
-
-
     const [newTask, setNewTask] = useState("");
     const [selectedTask, setSelectedTask] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -21,17 +19,31 @@ export default function Scrumboard() {
     const [errorMessage, setErrorMessage] = useState("");
     const [selectedColumn, setSelectedColumn] = useState("todo");
     const [members, setMembers] = useState("");
+    const [newColumnModalVisible, setNewColumnModalVisible] = useState(false);
+    const [newColumnName, setNewColumnName] = useState("");
+    const [newColumnPosition, setNewColumnPosition] = useState("");
 
-    // Validate time inputs
-    const validateTime = (start, end) => {
-        const startDate = new Date(`1970-01-01T${start}`);
-        const endDate = new Date(`1970-01-01T${end}`);
-        const duration = (endDate - startDate) / 1000 / 60;
+    // Function to create a new column
+    const createNewColumn = () => {
+        if (!newColumnName.trim() || isNaN(newColumnPosition) || newColumnPosition < 0 || newColumnPosition > columns.length) {
+            setErrorMessage("Ugyldige kolonneparametre.");
+            return;
+        }
 
-        if (isNaN(startDate) || isNaN(endDate)) return "Start- og sluttid er påkrævet.";
-        if (startDate >= endDate) return "Starttid skal være tidligere end sluttid.";
-        if (duration <= 0 || duration > 24 * 60) return "Total tid skal være positiv og mindre end 24 timer.";
-        return "";
+        const newColumn = {
+            id: Date.now().toString(),
+            name: newColumnName,
+            tasks: []
+        };
+
+        const updatedColumns = [...columns];
+        updatedColumns.splice(newColumnPosition, 0, newColumn);  // Insert new column at specified position
+
+        setColumns(updatedColumns);
+        setNewColumnModalVisible(false);
+        setNewColumnName("");  // Reset input
+        setNewColumnPosition("");  // Reset input
+        setErrorMessage("");  // Clear error message
     };
 
     const addTaskToBacklog = () => {
@@ -119,42 +131,15 @@ export default function Scrumboard() {
         setMembers(""); // Reset members input field
     };
 
-    const deleteTask = () => {
-        const updatedColumns = columns.map((column) =>
-            column.id === selectedTask.columnId
-                ? {
-                    ...column,
-                    tasks: column.tasks.filter((task) => task.id !== selectedTask.id),
-                }
-                : column
-        );
-
-        setColumns(updatedColumns);
-        setModalVisible(false); // Luk modal
-        setSelectedTask(null); // Nulstil valgte opgave
+    const openNewColumnModal = () => {
+        setNewColumnModalVisible(true);
     };
 
-
-    const openTaskDetails = (task) => {
-        setSelectedTask(task);
-        setModalVisible(true);
-    };
-
-    const getPriorityColor = (priority) => {
-        if (!priority || typeof priority !== 'string') {
-            return "#D3D3D3"; // Default gray if priority is undefined or not a string
-        }
-
-        switch (priority.toLowerCase()) {
-            case "high":
-                return "#FF6347"; // Red
-            case "medium":
-                return "#FFD700"; // Yellow
-            case "low":
-                return "#32CD32"; // Green
-            default:
-                return "#D3D3D3"; // Default gray if no recognized priority
-        }
+    const closeNewColumnModal = () => {
+        setNewColumnModalVisible(false);
+        setNewColumnName("");
+        setNewColumnPosition("");
+        setErrorMessage("");
     };
 
     return (
@@ -174,6 +159,11 @@ export default function Scrumboard() {
                     <Text style={styles.buttonText}>Tilføj opgave</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Add a new column button */}
+            <TouchableOpacity style={styles.button} onPress={openNewColumnModal}>
+                <Text style={styles.buttonText}>Opret ny kolonne</Text>
+            </TouchableOpacity>
 
             {/* Columns */}
             <View style={styles.board}>
@@ -268,6 +258,40 @@ export default function Scrumboard() {
                 </Modal>
             )}
 
+            {/* New column modal */}
+            {newColumnModalVisible && (
+                <Modal visible={newColumnModalVisible} animationType="slide">
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Opret ny kolonne</Text>
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Kolonne navn"
+                            value={newColumnName}
+                            onChangeText={setNewColumnName}
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Position (0 - {max kolonner})"
+                            keyboardType="numeric"
+                            value={newColumnPosition}
+                            onChangeText={setNewColumnPosition}
+                        />
+
+                        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+                        <TouchableOpacity style={styles.button} onPress={createNewColumn}>
+                            <Text style={styles.buttonText}>Opret kolonne</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={closeNewColumnModal}>
+                            <Text style={styles.closeButton}>Luk</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Modal>
+            )}
+
             <View style={styles.bottomBox}>
                 <Text style={styles.boxText}>
                     Copyright © 2024 Novozymes A/S, part of Novonesis Group
@@ -276,6 +300,8 @@ export default function Scrumboard() {
         </View>
     );
 }
+
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -322,12 +348,12 @@ const styles = StyleSheet.create({
     },
     board: {
         flexDirection: "row",
-        justifyContent: "space-between",
+        justifyContent: "space-evenly",  // Skiftet til space-evenly for mere ensartet afstand
         width: "100%",
     },
     column: {
-        width: "18%",  // Reduced column width for a more compact board
-        marginRight: 8,  // Reduced margin between columns
+        width: "15%",  // Reduceret kolonnebredden til 15% for at få plads til flere kolonner
+        marginRight: 4,  // Reduceret margin mellem kolonner
     },
     columnHeader: {
         fontSize: 16,  // Reduced font size for column headers
