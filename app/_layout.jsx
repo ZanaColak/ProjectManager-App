@@ -6,11 +6,16 @@ export default function RootLayout() {
     return (
         <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen
-                name={"department"}
-                options={{
-                    headerLeft: null,
-                    headerRight: () => (
+            <Stack.Screen name={"dashboard"} options={{headerLeft: null, headerRight: () => (
+                    <Button
+                        onPress={() => signingOut(router)}
+                        title="Sign Out"
+                        color="black"
+                    />
+                ),
+            }}
+            />
+            <Stack.Screen name={"department"} options={{headerLeft: null, headerRight: () => (
                         <Button
                             onPress={() => signingOut(router)}
                             title="Sign Out"
@@ -18,7 +23,6 @@ export default function RootLayout() {
                         />
                     ),
                 }}
-
             />
         </Stack>
     );
