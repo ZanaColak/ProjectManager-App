@@ -1,5 +1,5 @@
 import { router, Stack } from "expo-router";
-import { signingOut } from "@/app/signOut";
+import { signingOut } from "@/app/components/signOut";
 import { Button } from "react-native";
 
 export default function RootLayout() {

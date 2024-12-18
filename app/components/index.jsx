@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import {Text, View, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard} from "react-native";
 import { useRouter } from "expo-router";
-import { auth } from "./firebase";
+import { auth } from "../config/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { getUserRole, ensureDefaultRole } from "./firebase";
+import { getUserRole, ensureDefaultRole } from "../config/firebase";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");

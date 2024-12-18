@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator} from "react-native";
 import { doc, getDoc } from "firebase/firestore";
-import { database, auth } from "./firebase";
+import { database, auth } from "../config/firebase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {faChessBoard, faBars, faTimeline, faCalendarDays, faDiagramProject,} from "@fortawesome/free-solid-svg-icons";
 import {router} from "expo-router";
