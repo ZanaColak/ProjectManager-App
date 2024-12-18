@@ -5,11 +5,11 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
 });
 
-const db = admin.firestore();
+const database = admin.firestore();
 
 const assignAdminRole = async (uid) => {
     try {
-        const userRef = db.collection("users").doc(uid);
+        const userRef = database.collection("users").doc(uid);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
