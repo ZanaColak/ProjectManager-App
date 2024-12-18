@@ -4,8 +4,13 @@ import { auth } from "../config/firebase";
 export const signingOut = async (router) => {
   try {
     await signOut(auth);
-    router.replace("/");
+    if (router) {
+      router.push("/");
+    } else {
+      console.warn("Router is not defined. Unable to redirect after sign-out.");
+    }
   } catch (error) {
-    console.error("Sign out error", error);
+    console.error("Sign out error:", error);
+    alert("Failed to sign out. Please try again."); // Provide user feedback
   }
 };
