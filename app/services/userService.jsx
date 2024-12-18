@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { database } from "../config/firebase";
+import {doc, getDoc, setDoc} from "firebase/firestore";
+import {database} from "../config/firebase";
 
 export const ensureDefaultData = async (uid, email) => {
     const userRef = doc(database, "users", uid);
@@ -28,8 +28,8 @@ export const ensureDefaultData = async (uid, email) => {
 
             await setDoc(
                 userRef,
-                { departments: departmentsToAssign, updatedAt: new Date() },
-                { merge: true } // Merge to avoid overwriting other fields
+                {departments: departmentsToAssign, updatedAt: new Date()},
+                {merge: true} // Merge to avoid overwriting other fields
             );
         }
     } catch (error) {

@@ -1,4 +1,4 @@
-import { useRouter,Stack } from "expo-router";
+import { useRouter, Stack } from "expo-router";
 import {signingOut} from "./components/signOut";
 import {Button} from "react-native";
 
@@ -7,6 +7,7 @@ export default function RootLayout() {
 
     return (
         <Stack>
+
             {/* Index Screen */}
             <Stack.Screen name="index" options={{headerShown: false}}/>
 

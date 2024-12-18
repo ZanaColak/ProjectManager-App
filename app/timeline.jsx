@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from "react-native";
+import React, {useState} from "react";
+import {View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView} from "react-native";
 
-const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
+const Timeline = ({projects = [], tasks = [], teamMembers = []}) => {
     const [filterType, setFilterType] = useState("all"); // Filter for "all", "projects", "tasks", or "teamMember"
     const [timeFilter, setTimeFilter] = useState(7); // Default is 1 week (7 days)
     const [selectedTeamMember, setSelectedTeamMember] = useState(null); // Selected team member
@@ -91,7 +91,7 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
                 {dates.map((date, index) => (
                     <View key={index} style={styles.dateColumn}>
                         <Text style={styles.dateText}>{date.getDate()}</Text>
-                        <Text style={styles.dateText}>{date.toLocaleDateString([], { month: "short" })}</Text>
+                        <Text style={styles.dateText}>{date.toLocaleDateString([], {month: "short"})}</Text>
                     </View>
                 ))}
             </View>
@@ -136,7 +136,8 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
             {/* Filter Container */}
             <View style={styles.filterContainer}>
                 <TouchableOpacity onPress={() => setIsTimeFilterModalVisible(true)}>
-                    <Text style={styles.filterLabel}>Tid: {timeFilter === 7 ? "1 uge" : timeFilter === 30 ? "1 måned" : "Dag"}</Text>
+                    <Text
+                        style={styles.filterLabel}>Tid: {timeFilter === 7 ? "1 uge" : timeFilter === 30 ? "1 måned" : "Dag"}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsFilterTypeModalVisible(true)}>
                     <Text style={styles.filterLabel}>
@@ -158,7 +159,7 @@ const Timeline = ({ projects = [], tasks = [], teamMembers = [] }) => {
             </View>
 
             {/* Timeline Section */}
-            <View style={{ ...styles.timelineLineContainer, height: containerHeight }}>
+            <View style={{...styles.timelineLineContainer, height: containerHeight}}>
                 <View style={styles.dateContainer}>{renderTimelineDates()}</View>
                 <ScrollView style={styles.scrollContainer}>
                     <View style={styles.timelineContainer}>
@@ -246,15 +247,20 @@ export default function App() {
 
 
     const testTasks = [
-        { name: "Opgave 1", startDate: "2024-12-02T08:30:00", endDate: "2024-12-04T16:00:00", assignedTo: ["Member 1", "Member 2"] },
-        { name: "Opgave 2", startDate: "2024-12-06T10:00:00", endDate: "2024-12-08T14:00:00", assignedTo: ["Member 2"] },
+        {
+            name: "Opgave 1",
+            startDate: "2024-12-02T08:30:00",
+            endDate: "2024-12-04T16:00:00",
+            assignedTo: ["Member 1", "Member 2"]
+        },
+        {name: "Opgave 2", startDate: "2024-12-06T10:00:00", endDate: "2024-12-08T14:00:00", assignedTo: ["Member 2"]},
     ];
 
     const teamMembers = ["Member 1", "Member 2", "Member 3"];
 
     return (
-        <View style={{ flex: 1 }}>
-            <Timeline tasks={testTasks} teamMembers={teamMembers} />
+        <View style={{flex: 1}}>
+            <Timeline tasks={testTasks} teamMembers={teamMembers}/>
         </View>
     );
 }
@@ -292,10 +298,12 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         padding: 20,
         borderRadius: 10,
-        alignItems: "center" },
+        alignItems: "center"
+    },
     modalText: {
         fontSize: 18,
-        marginBottom: 15 },
+        marginBottom: 15
+    },
     dateRow: {
         flexDirection: "row",
         justifyContent: "space-evenly",

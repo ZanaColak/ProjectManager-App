@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
-import { Calendar } from 'react-native-calendars';
-import { fetchProjectData } from './config/firebase'; // Replace with your data fetching logic
+import React, {useState, useEffect} from 'react';
+import {View, Text, StyleSheet, Modal, TouchableOpacity} from 'react-native';
+import {Calendar} from 'react-native-calendars';
+import {fetchProjectData} from './config/firebase'; // Replace with your data fetching logic
 
 export default function ProjectCalendar() {
     const [projects, setProjects] = useState([]);
@@ -87,9 +87,9 @@ export default function ProjectCalendar() {
                     <View style={styles.modalContainer}>
                         <Text style={styles.modalText}>Color Code Legend:</Text>
                         <View style={styles.legendContainer}>
-                            <Text style={[styles.legendText, { color: 'green' }]}>• Upcoming</Text>
-                            <Text style={[styles.legendText, { color: 'yellow' }]}>• Near Deadline</Text>
-                            <Text style={[styles.legendText, { color: 'red' }]}>• Overdue</Text>
+                            <Text style={[styles.legendText, {color: 'green'}]}>• Upcoming</Text>
+                            <Text style={[styles.legendText, {color: 'yellow'}]}>• Near Deadline</Text>
+                            <Text style={[styles.legendText, {color: 'red'}]}>• Overdue</Text>
                         </View>
                         <TouchableOpacity
                             style={styles.closeButton}

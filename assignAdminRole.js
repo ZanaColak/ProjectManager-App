@@ -11,9 +11,9 @@ const assignAdminRole = async (uid) => {
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
-            await userRef.set({ role: "admin" });
+            await userRef.set({role: "admin"});
         } else {
-            await userRef.update({ role: "admin" });
+            await userRef.update({role: "admin"});
         }
     } catch (error) {
         console.error("Error updating role:", error);
