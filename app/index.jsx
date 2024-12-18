@@ -3,13 +3,13 @@ import { Text, View, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Key
 import { useRouter } from "expo-router";
 import { auth } from "./config/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { getUserRole, ensureDefaultRole } from "./services/userService";
+import { getUserRole, ensureDefaultData } from "./services/userService";
 
 export default function Index() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState(""); // Add error message state
-  const [showErrorModal, setShowErrorModal] = useState(false); // Add modal visibility state
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const router = useRouter();
 
   const signIn = async () => {
@@ -18,7 +18,7 @@ export default function Index() {
       const uid = userCredential.user.uid;
 
       // Ensure user role exists in Firestore
-      await ensureDefaultRole(uid, userCredential.user.email);
+      await ensureDefaultData(uid, userCredential.user.email);
 
       // Fetch role and navigate
       const role = await getUserRole(uid);

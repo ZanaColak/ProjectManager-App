@@ -1,22 +1,44 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useRouter, useGlobalSearchParams } from "expo-router";
+import { collection, doc, getDoc } from "firebase/firestore";
+import { database } from "./config/firebase";
 
 export default function DepartmentSelection() {
   const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { uid, role } = useGlobalSearchParams(); // Fetch additional params if needed
+  const { uid, role } = useGlobalSearchParams();
 
-  const departments = [
-    { label: "Fuglebakken", value: "Fuglebakken" },
-    { label: "Bagsværd", value: "Bagsværd" },
-    { label: "Kalundborg", value: "Kalundborg" },
-  ];
+  // Fetch accessible departments from Firestore
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const userRef = doc(database, "users", uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const allowedDepartments = userSnap.data().departments || []; // Array of accessible departments
+          setDepartments(allowedDepartments.map((dep) => ({ label: dep, value: dep })));
+        } else {
+          console.error("User not found in Firestore.");
+          Alert.alert("Fejl", "Brugerdata ikke fundet.");
+        }
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+        Alert.alert("Fejl", "Kunne ikke hente afdelinger.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartments();
+  }, [uid]);
 
   const handleConfirmSelection = () => {
     if (selectedDepartment) {
-      // Navigate to the dashboard with selected department and additional parameters
       router.push({
         pathname: "/dashboard",
         params: { department: selectedDepartment, uid, role },
@@ -25,6 +47,15 @@ export default function DepartmentSelection() {
       Alert.alert("Fejl", "Vælg venligst en afdeling.");
     }
   };
+
+  if (loading) {
+    return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#173630" />
+          <Text>Henter afdelinger...</Text>
+        </View>
+    );
+  }
 
   return (
       <View style={styles.container}>
@@ -52,9 +83,7 @@ export default function DepartmentSelection() {
         ) : null}
 
         <View style={styles.bottomBox}>
-          <Text style={styles.boxText}>
-            Copyright © 2024 Novozymes A/S, part of Novonesis Group
-          </Text>
+          <Text style={styles.boxText}>Copyright © 2024 Novozymes A/S, part of Novonesis Group</Text>
         </View>
       </View>
   );
@@ -68,6 +97,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
     paddingHorizontal: 20,
     paddingTop: 80,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerText: {
     fontSize: 22,

@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from "react";
-import {View, Text, TextInput, StyleSheet, Button, Alert, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback, Keyboard,} from "react-native";
+import { View, Text, TextInput, StyleSheet, Button, Alert, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback, Keyboard } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
 import { database } from "./config/firebase";
-import {collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where,} from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from "firebase/firestore";
 
 export default function Project() {
-  const { uid } = useGlobalSearchParams(); // Get the current user's UID
+  const { uid, department } = useGlobalSearchParams();
   const [projects, setProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
   const [editingProject, setEditingProject] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
 
+  // Fetch projects that belong to the current department
   useEffect(() => {
-    const q = query(collection(database, "projects"), where("owner", "==", uid));
+    const q = query(
+        collection(database, "projects"),
+        where("owner", "==", uid),
+        where("department", "==", department)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedProjects = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -22,22 +27,23 @@ export default function Project() {
       setProjects(fetchedProjects);
     });
 
-    return () => unsubscribe(); // Clean up the listener
-  }, [uid]);
+    return () => unsubscribe();
+  }, [uid, department]);
 
-  const handleCreateProject = async () => {
+  const createProject = async () => {
     if (newProjectName && newProjectDescription) {
       try {
         await addDoc(collection(database, "projects"), {
           name: newProjectName,
           description: newProjectDescription,
           owner: uid,
+          department,
           createdAt: new Date(),
         });
         setNewProjectName("");
         setNewProjectDescription("");
       } catch (error) {
-        Alert.alert("Error", "Failed to create project. Try again.");
+        Alert.alert("Fejl", "Oprettelse projekt mislykkes. Prøv igen.");
         console.error("Error creating project:", error);
       }
     } else {
@@ -92,7 +98,7 @@ export default function Project() {
 
   return (
       <View style={styles.container}>
-        <Text style={styles.header}>Projekter</Text>
+        <Text style={styles.header}>Projekter - {department}</Text>
 
         <TextInput
             style={styles.input}
@@ -112,14 +118,12 @@ export default function Project() {
                 title="Opdater Projekt"
                 onPress={handleUpdateProject}
                 color="#173630"
-                style={styles.button}
             />
         ) : (
             <Button
                 title="Opret Projekt"
-                onPress={handleCreateProject}
+                onPress={createProject}
                 color="#173630"
-                style={styles.button}
             />
         )}
 
