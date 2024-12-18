@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import {View, Text, StyleSheet, TouchableOpacity, Alert} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { useRouter } from "expo-router";
+import { useRouter, useGlobalSearchParams } from "expo-router";
 
 export default function DepartmentSelection() {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const router = useRouter();
+  const { uid, role } = useGlobalSearchParams(); // Fetch additional params if needed
 
   const departments = [
     { label: "Fuglebakken", value: "Fuglebakken" },
@@ -15,10 +16,10 @@ export default function DepartmentSelection() {
 
   const handleConfirmSelection = () => {
     if (selectedDepartment) {
-      // Navigér til dashboard og send afdeling som parameter
+      // Navigate to the dashboard with selected department and additional parameters
       router.push({
         pathname: "/dashboard",
-        params: { department: selectedDepartment },
+        params: { department: selectedDepartment, uid, role },
       });
     } else {
       Alert.alert("Fejl", "Vælg venligst en afdeling.");
@@ -37,11 +38,7 @@ export default function DepartmentSelection() {
           >
             <Picker.Item label="Vælg en afdeling" value="" />
             {departments.map((department, index) => (
-                <Picker.Item
-                    key={index}
-                    label={department.label}
-                    value={department.value}
-                />
+                <Picker.Item key={index} label={department.label} value={department.value} />
             ))}
           </Picker>
         </View>
@@ -51,9 +48,7 @@ export default function DepartmentSelection() {
         </TouchableOpacity>
 
         {selectedDepartment ? (
-            <Text style={styles.selectionText}>
-              Du har valgt: {selectedDepartment}
-            </Text>
+            <Text style={styles.selectionText}>Du har valgt: {selectedDepartment}</Text>
         ) : null}
 
         <View style={styles.bottomBox}>

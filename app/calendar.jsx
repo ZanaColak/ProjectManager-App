@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { fetchProjectData } from '../config/firebase'; // Replace with your data fetching logic
+import { fetchProjectData } from './config/firebase'; // Replace with your data fetching logic
 
 export default function ProjectCalendar() {
     const [projects, setProjects] = useState([]);

@@ -1,56 +1,36 @@
 import React, { useState } from "react";
-import {Text, View, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard} from "react-native";
+import { Text, View, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { auth } from "../config/firebase";
+import { auth } from "./config/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { getUserRole, ensureDefaultRole } from "../config/firebase";
+import { getUserRole, ensureDefaultRole } from "./services/userService";
 
-export default function SignIn() {
+export default function Index() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); // Add error message state
+  const [showErrorModal, setShowErrorModal] = useState(false); // Add modal visibility state
   const router = useRouter();
 
   const signIn = async () => {
     try {
-      const userCredential = await signInWithEmailAndPassword(
-          auth, email, password);
-
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // Ensure user has a role in Firestore (create if missing)
+      // Ensure user role exists in Firestore
       await ensureDefaultRole(uid, userCredential.user.email);
 
-      // Fetch the role from Firestore
+      // Fetch role and navigate
       const role = await getUserRole(uid);
-
-
-      if (role === "admin") {
-        router.push({
-          pathname: "/department",
-          params: { uid },
-        });
-      } else if (role === "member") {
-        router.push({
-          pathname: "/department",
-          params: { uid },
-        });
-      } else {
-        throw new Error("Invalid role detected. Contact support.");
+      if (!role) {
+        Alert.alert("Role not assigned to this user.");
       }
 
-      setShowErrorModal(false);
+      router.push({pathname: "/department", params: { uid, role } });
+
     } catch (error) {
-      console.error("Sign-in error:", error);
-      const errorMessages = {
-        "auth/user-not-found": "Ingen bruger fundet på denne email.",
-        "auth/wrong-password": "Din kode er angivet forkert.",
-      };
-      setErrorMessage(
-          errorMessages[error.code] || "Noget gik galt. Prøv igen."
-      );
-      setShowErrorModal(true);
+      setErrorMessage(error.message || "Something went wrong."); // Set error message
+      setShowErrorModal(true); // Show error modal
     }
   };
 
@@ -81,10 +61,7 @@ export default function SignIn() {
                 onChangeText={setPassword}
                 secureTextEntry
                 returnKeyType="done"
-                onSubmitEditing={() => {
-                  Keyboard.dismiss();
-                  signIn();
-                }}
+                onSubmitEditing={() => Keyboard.dismiss()}
             />
 
             <View style={styles.buttonContainer}>
@@ -107,7 +84,7 @@ export default function SignIn() {
                   style={styles.modalButton}
                   onPress={() => setShowErrorModal(false)}
               >
-                <Text style={styles.modalButtonText}>Luk</Text>
+                <Text style={styles.modalButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
