@@ -11,6 +11,6 @@ export const signingOut = async (router) => {
     }
   } catch (error) {
     console.error("Sign out error:", error);
-    alert("Failed to sign out. Please try again."); // Provide user feedback
+    alert("Failed to sign out. Please try again.");
   }
 };
