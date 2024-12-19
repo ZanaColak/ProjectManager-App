@@ -5,7 +5,7 @@ import { useRouter, useGlobalSearchParams } from "expo-router";
 import { collection, doc, getDoc } from "firebase/firestore";
 import { database } from "./config/firebase";
 
-export default function DepartmentSelection() {
+export default function Department() {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
