@@ -6,6 +6,8 @@ export const signingOut = async (router) => {
         await signOut(auth);
         if (router) {
             router.push("/");
+            sessionStorage.clear();
+            localStorage.clear();
         } else {
             console.warn("Router is not defined. Unable to redirect after sign-out.");
         }
