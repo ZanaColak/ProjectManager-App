@@ -12,7 +12,8 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{headerShown: false}}/>
 
             {/* Department Screen */}
-            <Stack.Screen name="department" options={{
+            <Stack.Screen name="department" options={{ title: "Afdeling",
+                headerLeft: null,
                 headerRight: () => (
                     <Button onPress={() => signingOut(router)}
                             title="Sign Out"
@@ -23,7 +24,7 @@ export default function RootLayout() {
             />
 
             {/* Dashboard Screen */}
-            <Stack.Screen name="dashboard" options={{
+            <Stack.Screen name="dashboard" options={{ title: "Opslagstavle",
                 headerRight: () => (
                     <Button onPress={() => signingOut(router)}
                             title="Sign Out"
@@ -34,16 +35,19 @@ export default function RootLayout() {
             />
 
             {/* Project Screen */}
-            <Stack.Screen name="project" options={{headerShown: true}}/>
+            <Stack.Screen name="project" options={{ title: "Projekt"}}/>
 
             {/* Scrum board Screen */}
-            <Stack.Screen name="scrumboard" options={{headerShown: true}}/>
+            <Stack.Screen name="scrumboard" options={{ title: "Scrum board"}}/>
 
             {/* Calender Screen */}
-            <Stack.Screen name="calendar" options={{headerShown: true}}/>
+            <Stack.Screen name="calendar" options={{ title: "Kalender"}}/>
 
             {/* Timeline Screen */}
-            <Stack.Screen name="timeline" options={{headerShown: true}}/>
+            <Stack.Screen name="timeline" options={{ title: "Tidslinje"}}/>
+
+            {/* Error Screen */}
+            <Stack.Screen name="error" options={{headerShown: false}}/>
 
         </Stack>
     );
