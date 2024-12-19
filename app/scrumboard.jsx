@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, Picker } from "react-native";
+import React, {useState} from "react";
+import {StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, Picker} from "react-native";
 
 export default function Scrumboard() {
     const [columns, setColumns] = useState([
-        { id: "todo", name: "Backlog", tasks: [] },
-        { id: "inprogress", name: "Igangværende", tasks: [] },
-        { id: "review", name: "Anmeldelse", tasks: [] },
-        { id: "done", name: "Færdig", tasks: [] },
-        { id: "blocked", name: "Blokeret", tasks: [] },
+        {id: "todo", name: "Backlog", tasks: []},
+        {id: "inprogress", name: "Igangværende", tasks: []},
+        {id: "review", name: "Anmeldelse", tasks: []},
+        {id: "done", name: "Færdig", tasks: []},
+        {id: "blocked", name: "Blokeret", tasks: []},
     ]);
     const [newTask, setNewTask] = useState("");
     const [selectedTask, setSelectedTask] = useState(null);
@@ -173,9 +173,9 @@ export default function Scrumboard() {
 
                         <FlatList
                             data={column.tasks}
-                            renderItem={({ item }) => (
+                            renderItem={({item}) => (
                                 <TouchableOpacity onPress={() => openTaskDetails(item)}>
-                                    <View style={[styles.taskCard, { backgroundColor: getPriorityColor(item.priority) }]} >
+                                    <View style={[styles.taskCard, {backgroundColor: getPriorityColor(item.priority)}]}>
                                         <Text style={styles.taskName}>{item.name}</Text>
                                     </View>
                                 </TouchableOpacity>
@@ -204,9 +204,9 @@ export default function Scrumboard() {
                             style={styles.input}
                             onValueChange={(itemValue) => setPriority(itemValue)}
                         >
-                            <Picker.Item label="Lav" value="low" />
-                            <Picker.Item label="Medium" value="medium" />
-                            <Picker.Item label="Høj" value="high" />
+                            <Picker.Item label="Lav" value="low"/>
+                            <Picker.Item label="Medium" value="medium"/>
+                            <Picker.Item label="Høj" value="high"/>
                         </Picker>
 
                         {/* Manual time input */}
@@ -237,7 +237,7 @@ export default function Scrumboard() {
                             onValueChange={(itemValue) => setSelectedColumn(itemValue)}
                         >
                             {columns.map((column) => (
-                                <Picker.Item key={column.id} label={column.name} value={column.id} />
+                                <Picker.Item key={column.id} label={column.name} value={column.id}/>
                             ))}
                         </Picker>
 
@@ -247,7 +247,7 @@ export default function Scrumboard() {
                             <Text style={styles.buttonText}>Gem detaljer</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={[styles.button, { backgroundColor: "red" }]} onPress={deleteTask}>
+                        <TouchableOpacity style={[styles.button, {backgroundColor: "red"}]} onPress={deleteTask}>
                             <Text style={styles.buttonText}>Slet opgave</Text>
                         </TouchableOpacity>
 

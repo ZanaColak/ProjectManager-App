@@ -1,242 +1,269 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Button,
-  Alert,
-  FlatList,
-  TouchableOpacity,
-  Modal,
-  TouchableWithoutFeedback,
-  Keyboard,
-} from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal } from "react-native";
+import {router, useGlobalSearchParams} from "expo-router";
+import { fetchProjects } from "./services/dataService";
+import {addDoc, deleteDoc, updateDoc, doc, collection} from "firebase/firestore";
+import Icon from "react-native-vector-icons/FontAwesome";
+import {database} from "./config/firebase";
 
-export default function ProjectPage() {
-  const [projects, setProjects] = useState([]);
-  const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectDescription, setNewProjectDescription] = useState("");
-  const [editingProject, setEditingProject] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null); // State for selected project to show modal
+export default function Projects() {
+    const { uid, department, role } = useGlobalSearchParams();
+    const [projectName, setProjectName] = useState("");
+    const [projectDescription, setProjectDescription] = useState("");
+    const [editingProject, setEditingProject] = useState(null);
+    const [showAdminModal, setShowAdminModal] = useState(false);
 
-  // Opret projekt
-  const handleCreateProject = () => {
-    if (newProjectName && newProjectDescription) {
-      const newProject = {
-        id: (projects.length + 1).toString(),
-        name: newProjectName,
-        description: newProjectDescription,
-      };
-      setProjects([...projects, newProject]);
-      setNewProjectName("");
-      setNewProjectDescription("");
-    } else {
-      Alert.alert("Fejl", "Alle felter skal udfyldes.");
-    }
-  };
+    const { projects, loading, error } = fetchProjects(department);
 
-  // Rediger projekt
-  const handleEditProject = (project) => {
-    setEditingProject(project);
-    setNewProjectName(project.name);
-    setNewProjectDescription(project.description);
-  };
+    const handleError = (message) => {
+        router.push({ pathname: "/components/error", params: { message } });
+    };
 
-  // Opdater projekt
-  const handleUpdateProject = () => {
-    if (newProjectName && newProjectDescription) {
-      setProjects(
-        projects.map((project) =>
-          project.id === editingProject.id
-            ? {
-                ...project,
-                name: newProjectName,
-                description: newProjectDescription,
-              }
-            : project
-        )
-      );
-      setEditingProject(null);
-      setNewProjectName("");
-      setNewProjectDescription("");
-    } else {
-      Alert.alert("Fejl", "Alle felter skal udfyldes.");
-    }
-  };
+    const createProject = async () => {
+        if (projectName && projectDescription) {
+            try {
+                await addDoc(collection(database, "projects"), {
+                    name: projectName,
+                    description: projectDescription,
+                    owner: uid,
+                    department,
+                    createdAt: new Date(),
+                });
+                setProjectName("");
+                setProjectDescription("");
+                setShowAdminModal(false);
+            } catch (error) {
+                handleError(error.name, "Error", "Failed to create project.");
+                console.error("Error creating project:", error);
+            }
+        } else {
+            Alert.alert("Error", "All fields must be filled.");
+        }
+    };
 
-  // Slet projekt
-  const handleDeleteProject = (projectId) => {
-    setProjects(projects.filter((project) => project.id !== projectId));
-  };
+    const deleteProject = async (id) => {
+        try {
+            await deleteDoc(doc(database, "projects", id));
+        } catch (error) {
+            Alert.alert("Error", "Failed to delete project.");
+            console.error("Error deleting project:", error);
+        }
+    };
 
-  // Åbn Modal for at vise projektbeskrivelse
-  const openProjectDescription = (project) => {
-    setSelectedProject(project);
-  };
+    const editProject = (project) => {
+        setEditingProject(project);
+        setProjectName(project.name);
+        setProjectDescription(project.description);
+        setShowAdminModal(true);
+    };
 
-  // Luk Modal
-  const closeModal = () => {
-    setSelectedProject(null);
-  };
+    const updateProject = async () => {
+        if (projectName && projectDescription && editingProject) {
+            try {
+                const projectRef = doc(database, "projects", editingProject.id);
+                await updateDoc(projectRef, {
+                    name: projectName,
+                    description: projectDescription,
+                    updatedAt: new Date(),
+                });
+                setEditingProject(null);
+                setProjectName("");
+                setProjectDescription("");
+                setShowAdminModal(false);
+            } catch (error) {
+                Alert.alert("Error", "Failed to update project.");
+                console.error("Error updating project:", error);
+            }
+        } else {
+            Alert.alert("Error", "All fields must be filled.");
+        }
+    };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Projekter</Text>
+    return (
+        <View style={styles.container}>
+            <Text style={styles.header}>Projects - {department}</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Projekt Navn"
-        value={newProjectName}
-        onChangeText={setNewProjectName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Projekt Beskrivelse"
-        value={newProjectDescription}
-        onChangeText={setNewProjectDescription}
-      />
+            {/* Admin Icon to Open the Modal */}
+            {role === "admin" && (
+                <TouchableOpacity style={styles.adminIcon} onPress={() => setShowAdminModal(true)}>
+                    <Icon name="plus-circle" size={30} color="#173630" />
+                </TouchableOpacity>
+            )}
 
-      {editingProject ? (
-        <Button
-          title="Opdater Projekt"
-          onPress={handleUpdateProject}
-          color="#173630"
-          style={styles.button}
-        />
-      ) : (
-        <Button
-          title="Opret Projekt"
-          onPress={handleCreateProject}
-          color="#173630"
-          style={styles.button}
-        />
-      )}
+            {loading && <Text>Loading...</Text>}
+            {error && <Text>Error loading projects.</Text>}
 
-      <FlatList
-        data={projects}
-        renderItem={({ item }) => (
-          <View style={styles.projectItem}>
-            <TouchableOpacity onPress={() => openProjectDescription(item)}>
-              <Text style={styles.projectTitle}>{item.name}</Text>
-            </TouchableOpacity>
-            <View style={styles.projectActions}>
-              <TouchableOpacity onPress={() => handleEditProject(item)}>
-                <Text style={styles.actionText}>Rediger</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDeleteProject(item.id)}>
-                <Text style={styles.actionText}>Slet</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        keyExtractor={(item) => item.id}
-      />
+            <ScrollView style={styles.list}>
+                {projects.map((project) => (
+                    <View style={styles.projectItemContainer} key={project.id}>
+                        <View style={styles.projectItem}>
+                            <Text style={styles.projectText}>
+                                {project.name.length > 30
+                                    ? `${project.name.substring(0, 30)}...`
+                                    : project.name}
+                                {project.description && project.description.length > 0 && (
+                                    <Text style={{ fontSize: 12, color: "#999" }}>
+                                        {" "}
+                                        - {project.description.length > 30 ? `${project.description.substring(0, 30)}...` : project.description}
+                                    </Text>
+                                )}
+                            </Text>
+                        </View>
 
-      {/* Modal for project description */}
-      {selectedProject && (
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={selectedProject !== null}
-          onRequestClose={closeModal}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.modalBackground}>
-              <View style={styles.modalContainer}>
-                <Text style={styles.modalTitle}>Beskrivelse</Text>
-                <Text style={styles.modalDescription}>
-                  {selectedProject.description}
-                </Text>
-                <Button title="Luk" onPress={closeModal} color="#173630" />
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      )}
-    </View>
-  );
+                        {/* Edit/Delete Icons for Admins */}
+                        {role === "admin" && (
+                            <>
+                                <TouchableOpacity
+                                    onPress={() => editProject(project)}
+                                    style={styles.editButton}
+                                >
+                                    <Icon name="edit" size={24} color="#000" />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => deleteProject(project.id)}
+                                    style={styles.deleteButton}
+                                >
+                                    <Icon name="trash" size={24} color="#000" />
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+                ))}
+            </ScrollView>
+
+            {/* Admin Modal for Creating/Editing Projects */}
+            {role === "admin" && (
+                <Modal visible={showAdminModal} animationType="slide" transparent>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalContent}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Project Name"
+                                value={projectName}
+                                onChangeText={setProjectName}
+                            />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Project Description"
+                                value={projectDescription}
+                                onChangeText={setProjectDescription}
+                            />
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={editingProject ? updateProject : createProject}
+                            >
+                                <Text style={styles.addButtonText}>
+                                    {editingProject ? "Update" : "Create"}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={() => {
+                                    setShowAdminModal(false);
+                                    setEditingProject(null);
+                                    setProjectName("");
+                                    setProjectDescription("");
+                                }}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            )}
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-    paddingHorizontal: 20,
-    paddingTop: 80,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#333",
-  },
-  input: {
-    width: "50%", // Holder input felterne på 80% af bredden
-    padding: 12,
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    backgroundColor: "#ededed",
-    color: "#000000",
-  },
-  projectItem: {
-    width: "20%",
-    padding: 15,
-    marginVertical: 8,
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  projectTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#173630",
-  },
-  projectActions: {
-    marginTop: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  actionText: {
-    color: "#173630",
-    fontWeight: "bold",
-    marginHorizontal: 10,
-  },
-  // Modal styles
-  modalBackground: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContainer: {
-    width: "50%",
-    padding: 10,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  modalDescription: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  button: {
-    width: "50%",
-    height: 40,
-    alignSelf: "center",
-    marginVertical: 10,
-    justifyContent: "center",
-    borderRadius: 5,
-    backgroundColor: "#173630",
-  },
+    container: {
+        flex: 1,
+        backgroundColor: "#f8f9fa",
+        paddingHorizontal: 20,
+        paddingTop: 80,
+    },
+    header: {
+        fontSize: 24,
+        fontWeight: "bold",
+        marginBottom: 20,
+        textAlign: "center",
+        color: "#333",
+    },
+    adminIcon: {
+        alignSelf: "flex-end",
+        marginRight: 20,
+        marginBottom: 10,
+    },
+    list: {
+        flex: 1,
+    },
+    projectItemContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 10,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 5,
+        backgroundColor: "#fff",
+    },
+    projectItem: {
+        flex: 1,
+    },
+    projectText: {
+        fontSize: 16,
+        color: "#173630",
+    },
+    editButton: {
+        marginRight: 10,
+    },
+    deleteButton: {
+        marginLeft: 10,
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    modalContent: {
+        width: "80%",
+        padding: 20,
+        backgroundColor: "#fff",
+        borderRadius: 10,
+        alignItems: "center",
+    },
+    input: {
+        width: "100%",
+        padding: 12,
+        borderWidth: 1,
+        borderRadius: 5,
+        marginBottom: 10,
+        backgroundColor: "#ededed",
+        color: "#000000",
+    },
+    addButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        backgroundColor: "#173630",
+        borderRadius: 5,
+    },
+    addButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    cancelButton: {
+        marginTop: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        backgroundColor: "#d9534f",
+        borderRadius: 5,
+    },
+    cancelButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
 });
