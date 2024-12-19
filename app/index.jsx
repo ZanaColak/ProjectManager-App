@@ -1,9 +1,7 @@
-import React, {useState} from "react";
-import {Text, View, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard, Alert} from "react-native";
-import {useRouter} from "expo-router";
-import {auth} from "./config/firebase";
-import {signInWithEmailAndPassword} from "firebase/auth";
-import {getUserRole, ensureDefaultData} from "./services/userService";
+import React, { useState } from "react";
+import { View, Text, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard } from "react-native";
+import { useRouter } from "expo-router";
+import { signIn } from "./components/signIn";
 
 export default function Index() {
     const [email, setEmail] = useState("");
@@ -12,33 +10,21 @@ export default function Index() {
     const [showErrorModal, setShowErrorModal] = useState(false);
     const router = useRouter();
 
-    const signIn = async () => {
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const uid = userCredential.user.uid;
-
-            // Ensure user role exists in Firestore
-            await ensureDefaultData(uid, userCredential.user.email);
-
-            // Fetch role and navigate
-            const role = await getUserRole(uid);
-            if (!role) {
-                Alert.alert("Role not assigned to this user.");
+    const signingIn = async () => {
+        await signIn(email, password, (uid, role) => {
+                router.push({ pathname: "/department", params: { uid, role } });
+            },
+            (error) => {
+                setErrorMessage(error);
+                setShowErrorModal(true);
             }
-
-            router.push({pathname: "/department", params: {uid, role}});
-
-        } catch (error) {
-            setErrorMessage(error.message || "Something went wrong."); // Set error message
-            setShowErrorModal(true); // Show error modal
-        }
+        );
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.text}>Sign In</Text>
-
                 <View style={styles.inputContainer}>
                     <TextInput
                         style={styles.input}
@@ -50,7 +36,6 @@ export default function Index() {
                         returnKeyType="next"
                         onSubmitEditing={() => this.passwordInput?.focus()}
                     />
-
                     <TextInput
                         ref={(input) => {
                             this.passwordInput = input;
@@ -63,14 +48,11 @@ export default function Index() {
                         returnKeyType="done"
                         onSubmitEditing={() => Keyboard.dismiss()}
                     />
-
                     <View style={styles.buttonContainer}>
-                        <Button title="Sign In" onPress={signIn} color="#173630"/>
+                        <Button title="Sign In" onPress={signingIn} color="#173630" />
                     </View>
                 </View>
             </View>
-
-            {/* Error Modal */}
             <Modal
                 transparent
                 visible={showErrorModal}
