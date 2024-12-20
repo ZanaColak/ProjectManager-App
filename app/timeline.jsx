@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from "react-native";
 import { fetchProjects } from "./services/dataService";
 import Icon from "react-native-vector-icons/FontAwesome";
-import {router, useGlobalSearchParams} from "expo-router";
-import {addDoc, deleteDoc, updateDoc, doc, collection} from "firebase/firestore";
+import { router, useGlobalSearchParams } from "expo-router";
+import { addDoc, deleteDoc, updateDoc, doc, collection } from "firebase/firestore";
 import { database } from "./config/firebase";
 
 export default function Timeline() {
     const { uid, department, role } = useGlobalSearchParams(); // Get params from URL
     const { projects, loading, error } = fetchProjects(department);
+    //const { projectTasks, loading, error } = fetchProjects(department);
+    //const { teamMembers, loading, error } = fetchProjects(department);
 
     const [selectedProject, setSelectedProject] = useState(""); // Track selected project
     const [filterType, setFilterType] = useState("all");
@@ -16,7 +18,6 @@ export default function Timeline() {
     const [selectedTeamMember, setSelectedTeamMember] = useState(null);
     const [filteredData, setFilteredData] = useState([]);
     const [tasks, setTasks] = useState([]);
-
 
     const [isTimeFilterModalVisible, setIsTimeFilterModalVisible] = useState(false);
     const [isFilterTypeModalVisible, setIsFilterTypeModalVisible] = useState(false);
@@ -36,25 +37,32 @@ export default function Timeline() {
         fetchData();
     }, [department]);
 
-
     const handleFilterChange = (type) => {
         setFilterType(type);
+
         if (type === "all") {
-            setFilteredData([...projects, ...tasks]);
-        } else if (type === "tasks") {
-            setFilteredData(tasks);
-        } else if (type === "teamMember" && selectedTeamMember) {
-            const memberTasks = tasks.filter((task) =>
-                task.assignedTo.includes(selectedTeamMember)
-            );
-            setFilteredData(memberTasks);
+            setFilteredData(tasks); // Show all tasks
         } else if (type === "projectTasks" && selectedProject) {
-            const projectTasks = tasks.filter((task) =>
-                task.projectName === selectedProject
-            );
-            setFilteredData(projectTasks);
+            const projectTasks = tasks.filter((task) => task.projectName === selectedProject);
+            setFilteredData(projectTasks); // Filter tasks for selected project
         }
-        setIsFilterTypeModalVisible(false);
+
+        setIsFilterTypeModalVisible(false); // Close filter type modal
+    };
+
+    const handleProjectChange = (project) => {
+        setSelectedProject(project);
+        const projectTasks = tasks.filter((task) => task.projectName === project);
+        setFilteredData(projectTasks); // Update filter to show only tasks for selected project
+        setIsProjectModalVisible(false);
+    };
+
+    const renderProjectTasks = () => {
+        return filteredData.map((task, index) => (
+            <TouchableOpacity key={index} onPress={() => console.log(`Task selected: ${task.name}`)}>
+                <Text style={styles.modalOption}>{task.name}</Text>
+            </TouchableOpacity>
+        ));
     };
 
     const handleTimeFilterChange = (days) => {
@@ -77,16 +85,6 @@ export default function Timeline() {
         }
 
         setFilterType("teamMember");
-    };
-
-    const handleProjectChange = (project) => {
-        setSelectedProject(project);
-        setFilterType("projectTasks");
-        const projectTasks = tasks.filter((task) =>
-            task.projectName === project
-        );
-        setFilteredData(projectTasks);
-        setIsProjectModalVisible(false); // Close the project filter modal
     };
 
     const generateTimelineDates = () => {
@@ -152,61 +150,142 @@ export default function Timeline() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>Projekt og Task Timeline</Text>
+            <Text style={styles.header}>Project and Task Timeline</Text>
 
             <View style={styles.filterContainer}>
-                {/* Time Filter Button */}
+                {/* Time Filter */}
                 <TouchableOpacity onPress={() => setIsTimeFilterModalVisible(true)} style={styles.filterButton}>
                     <Text style={styles.filterLabel}>
-                        Tid: {timeFilter === 7 ? "1 uge" : timeFilter === 30 ? "1 måned" : "Dag"}
+                        Time: {timeFilter === 7 ? "1 week" : timeFilter === 30 ? "1 month" : "Day"}
                     </Text>
                 </TouchableOpacity>
-                {/* Filter Type Button */}
+
+                {/* Member Filter */}
+                <TouchableOpacity onPress={() => setIsTeamMemberModalVisible(true)} style={styles.filterButton}>
+                    <Text style={styles.filterLabel}>
+                        {selectedTeamMember ? `Member: ${selectedTeamMember}` : "Select Member"}
+                    </Text>
+                </TouchableOpacity>
+
+                {/* Task Filter */}
                 <TouchableOpacity onPress={() => setIsFilterTypeModalVisible(true)} style={styles.filterButton}>
                     <Text style={styles.filterLabel}>
                         {filterType === "all"
-                            ? "Vis alle"
-                            : filterType === "tasks"
-                                ? "Kun opgaver"
-                                : filterType === "projectTasks" && selectedProject
-                                    ? `Projekt: ${selectedProject}`
-                                    : selectedTeamMember
-                                        ? `Medlem: ${selectedTeamMember}`
-                                        : "Teammedlem"}
+                            ? "All Tasks"
+                            : selectedProject
+                                ? `Project Tasks: ${selectedProject}`
+                                : "Select Tasks"}
                     </Text>
                 </TouchableOpacity>
-                {/* Team Member Filter Button */}
-                <TouchableOpacity onPress={() => setIsTeamMemberModalVisible(true)} style={styles.filterButton}>
-                    <Text style={styles.filterLabel}>Medlem</Text>
-                </TouchableOpacity>
-                {/* Project Filter Button */}
+
+                {/* Project Filter */}
                 <TouchableOpacity onPress={() => setIsProjectModalVisible(true)} style={styles.filterButton}>
-                    <Text style={styles.filterLabel}>Projekt</Text>
+                    <Text style={styles.filterLabel}>
+                        {selectedProject ? `Project: ${selectedProject}` : "Select Project"}
+                    </Text>
                 </TouchableOpacity>
             </View>
 
+            {/* Modals */}
 
-            {/* Project filter modal */}
+            {/* Time Filter Modal */}
+            <Modal
+                visible={isTimeFilterModalVisible}
+                onRequestClose={() => setIsTimeFilterModalVisible(false)}
+                animationType="slide"
+            >
+                <View style={styles.modalContainer}>
+                    <Text style={styles.modalHeader}>Select Time</Text>
+                    {[7, 30, 1].map((time) => (
+                        <TouchableOpacity
+                            key={time}
+                            onPress={() => handleTimeFilterChange(time)}
+                        >
+                            <Text style={styles.modalOption}>
+                                {time === 7 ? "1 week" : time === 30 ? "1 month" : "Day"}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity onPress={() => setIsTimeFilterModalVisible(false)}>
+                        <Text style={styles.closeModal}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
+            {/* Member Filter Modal */}
+            <Modal
+                visible={isTeamMemberModalVisible}
+                onRequestClose={() => setIsTeamMemberModalVisible(false)}
+                animationType="slide"
+            >
+                <View style={styles.modalContainer}>
+                    <Text style={styles.modalHeader}>Select Member</Text>
+                    {tasks.length > 0 &&
+                        [...new Set(tasks.map((task) => task.assignedTo))].map((member, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                onPress={() => handleTeamMemberChange(member)}
+                            >
+                                <Text style={styles.modalOption}>{member}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    <TouchableOpacity onPress={() => setIsTeamMemberModalVisible(false)}>
+                        <Text style={styles.closeModal}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
+            {/* Task Filter Modal */}
+            <Modal
+                visible={isFilterTypeModalVisible}
+                onRequestClose={() => setIsFilterTypeModalVisible(false)}
+                animationType="slide"
+            >
+                <View style={styles.modalContainer}>
+                    <Text style={styles.modalHeader}>Select Tasks</Text>
+                    <TouchableOpacity onPress={() => handleFilterChange("all")}>
+                        <Text style={styles.modalOption}>All Tasks</Text>
+                    </TouchableOpacity>
+                    {selectedProject && (
+                        <TouchableOpacity onPress={() => handleFilterChange("projectTasks")}>
+                            <Text style={styles.modalOption}>
+                                Tasks from Project: {selectedProject}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => setIsFilterTypeModalVisible(false)}>
+                        <Text style={styles.closeModal}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
+            {/* Project Filter Modal */}
             <Modal
                 visible={isProjectModalVisible}
                 onRequestClose={() => setIsProjectModalVisible(false)}
                 animationType="slide"
             >
                 <View style={styles.modalContainer}>
-                    <Text style={styles.modalHeader}>Vælg Projekt</Text>
+                    <Text style={styles.modalHeader}>Select Project</Text>
                     {loading && <Text>Loading projects...</Text>}
                     {error && <Text>Error loading projects: {error.message}</Text>}
-                    {!loading && !error && projects.map((project) => (
-                        <TouchableOpacity key={project.id} onPress={() => handleProjectChange(project.name)}>
-                            <Text style={styles.modalOption}>{project.name}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    {!loading &&
+                        !error &&
+                        projects.map((project) => (
+                            <TouchableOpacity
+                                key={project.id}
+                                onPress={() => handleProjectChange(project.name)}
+                            >
+                                <Text style={styles.modalOption}>{project.name}</Text>
+                            </TouchableOpacity>
+                        ))}
                     <TouchableOpacity onPress={() => setIsProjectModalVisible(false)}>
-                        <Text style={styles.closeModal}>Luk</Text>
+                        <Text style={styles.closeModal}>Close</Text>
                     </TouchableOpacity>
                 </View>
             </Modal>
 
+            {/* Timeline */}
             <View style={{ ...styles.timelineLineContainer, height: containerHeight }}>
                 <View style={styles.dateContainer}>{renderTimelineDates()}</View>
                 <ScrollView style={styles.scrollContainer}>
@@ -216,23 +295,37 @@ export default function Timeline() {
                 </ScrollView>
             </View>
 
+            <ScrollView style={styles.scrollContainer}>
+                <View style={{ flex: 1 }}>
+                    <View style={styles.timelineContainer}>
+                        {filteredData.map((item, index) => renderTimelineLine(item, index))}
+                    </View>
+                </View>
+            </ScrollView>
             <View style={styles.bottomBox}>
-                <Text style={styles.boxText}>Copyright © 2024 Novozymes A/S, part of Novonesis Group</Text>
+                <Text style={styles.boxText}>
+                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
+                </Text>
             </View>
+
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flex: 1, // Use flex: 1 to ensure the container takes up the entire screen
+        justifyContent: "space-between", // Distribute space between timeline and footer
         paddingTop: 20,
     },
     header: {
         fontSize: 24,
         fontWeight: "bold",
         marginBottom: 20,
+        textAlign: "center",
+        width: "100%",
     },
+
     filterContainer: {
         flexDirection: "row",
         flexWrap: "wrap", // Allow the filter buttons to wrap if they exceed screen width
@@ -272,12 +365,13 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
     timelineLineContainer: {
-        flex: 1,
+        flex: 1, // Make the timeline a flexible container that fills the remaining space
         position: "relative",
         width: "100%",
     },
     scrollContainer: {
-        flexGrow: 1,
+        flex: 1, // Ensure the scrollContainer fills all available space
+        marginBottom: 70, // Ensure footer has space
     },
     timelineContainer: {
         position: "relative",
@@ -298,18 +392,17 @@ const styles = StyleSheet.create({
     },
     bottomBox: {
         width: "100%",
-        height: 70,
+        height: 60,  // Reduced height of footer
         backgroundColor: "#173630",
         justifyContent: "center",
         alignItems: "center",
         position: "absolute",
         bottom: 0,
-        left: 0,
     },
     boxText: {
         color: "#fff",
-        fontSize: 15,
-        lineHeight: 18,
+        fontSize: 14,
+        lineHeight: 16,
         textAlign: "center",
     },
     modalContainer: {
