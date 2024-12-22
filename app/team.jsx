@@ -28,7 +28,7 @@ export default function Team() {
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    //tjek for brugerens rolle
+    // Tjek for brugerens rolle
     const fetchUserRole = async () => {
       const userRole = "admin"; // Hent brugerens rolle fra firebase auth
       setIsAdmin(userRole === "admin");
@@ -51,12 +51,17 @@ export default function Team() {
     return (
       <View style={styles.errorContainer}>
         <Text>Der opstod en fejl ved indlæsning af brugere.</Text>
-        <Text>{error.message}</Text>
+        <Text>{error?.message || "Ukendt fejl"}</Text>
       </View>
     );
   }
 
   const handleAddUser = async () => {
+    if (!isAdmin) {
+      console.error("Kun admins kan tilføje brugere.");
+      return;
+    }
+
     try {
       if (editingUser) {
         await updateUser(department, editingUser.id, newUserEmail, newUserRole);
@@ -76,6 +81,11 @@ export default function Team() {
   };
 
   const handleEditUser = (user) => {
+    if (!isAdmin) {
+      console.error("Kun admins kan redigere brugere.");
+      return;
+    }
+
     setEditingUser(user);
     setNewUserEmail(user.email);
     setNewUserRole(user.role);
@@ -83,6 +93,11 @@ export default function Team() {
   };
 
   const handleDeleteUser = async (userId) => {
+    if (!isAdmin) {
+      console.error("Kun admins kan slette brugere.");
+      return;
+    }
+
     try {
       await deleteUser(department, userId);
       console.log("Bruger slettet");
