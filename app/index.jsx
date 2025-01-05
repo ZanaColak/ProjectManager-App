@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard } from "react-native";
+import { View, Text, TextInput, StyleSheet, Button, Modal, TouchableOpacity, Keyboard, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { signIn } from "./components/signIn";
 
@@ -53,24 +53,42 @@ export default function Index() {
                     </View>
                 </View>
             </View>
-            <Modal
-                transparent
-                visible={showErrorModal}
-                animationType="slide"
-                onRequestClose={() => setShowErrorModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalText}>{errorMessage}</Text>
-                        <TouchableOpacity
-                            style={styles.modalButton}
-                            onPress={() => setShowErrorModal(false)}
-                        >
-                            <Text style={styles.modalButtonText}>Close</Text>
-                        </TouchableOpacity>
+
+            {/* Error Modal */}
+            {Platform.OS === "web" ? (
+                showErrorModal && (
+                    <View style={[styles.modalOverlay, { position: "fixed", zIndex: 100 }]}>
+                        <View style={styles.modalContainer}>
+                            <Text style={styles.modalText}>{errorMessage}</Text>
+                            <TouchableOpacity
+                                style={styles.modalButton}
+                                onPress={() => setShowErrorModal(false)}
+                            >
+                                <Text style={styles.modalButtonText}>Close</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
-            </Modal>
+                )
+            ) : (
+                <Modal
+                    transparent
+                    visible={showErrorModal}
+                    animationType="slide"
+                    onRequestClose={() => setShowErrorModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContainer}>
+                            <Text style={styles.modalText}>{errorMessage}</Text>
+                            <TouchableOpacity
+                                style={styles.modalButton}
+                                onPress={() => setShowErrorModal(false)}
+                            >
+                                <Text style={styles.modalButtonText}>Close</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            )}
         </View>
     );
 }

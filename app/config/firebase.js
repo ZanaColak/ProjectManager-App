@@ -1,10 +1,12 @@
-// Import the functions you need from the SDKs you need
-import {initializeApp} from "firebase/app";
-import {getFirestore} from 'firebase/firestore';
-import {getStorage} from 'firebase/storage';
-import {getAuth} from 'firebase/auth';
+// Import the necessary Firebase functions
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import { initializeAuth, getAuth, getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-// Your web app's Firebase configuration
+// Your Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCZPkLmX15vUa1baJn7Ghh6zVHNyHDpzbQ",
     authDomain: "projectmaneger-novonesis.firebaseapp.com",
@@ -12,13 +14,18 @@ const firebaseConfig = {
     storageBucket: "projectmaneger-novonesis.firebasestorage.app",
     messagingSenderId: "1049257805426",
     appId: "1:1049257805426:web:a38785e3e29e8b230ee4eb",
-    measurementId: "G-EHEB1J5F3D"
+    measurementId: "G-EHEB1J5F3D",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const database = getFirestore(app);
 const storage = getStorage(app);
-const auth = getAuth(app);
 
-export {app, database, storage, auth};
+// Initialize Auth with platform-specific handling
+const auth =
+    Platform.OS === "web"
+        ? getAuth(app)
+        : initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+
+export { app, database, storage, auth };

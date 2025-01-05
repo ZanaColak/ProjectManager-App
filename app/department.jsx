@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useRouter, useGlobalSearchParams } from "expo-router";
 import { collection, doc, getDoc } from "firebase/firestore";
@@ -24,11 +24,11 @@ export default function Department() {
           setDepartments(allowedDepartments.map((dep) => ({ label: dep, value: dep })));
         } else {
           console.error("User not found in Firestore.");
-          Alert.alert("Fejl", "Brugerdata ikke fundet.");
+          showAlert("Fejl", "Brugerdata ikke fundet.");
         }
       } catch (error) {
         console.error("Error fetching departments:", error);
-        Alert.alert("Fejl", "Kunne ikke hente afdelinger.");
+        showAlert("Fejl", "Kunne ikke hente afdelinger.");
       } finally {
         setLoading(false);
       }
@@ -44,7 +44,15 @@ export default function Department() {
         params: { department: selectedDepartment, uid, role },
       });
     } else {
-      Alert.alert("Fejl", "Vælg venligst en afdeling.");
+      showAlert("Fejl", "Vælg venligst en afdeling.");
+    }
+  };
+
+  const showAlert = (title, message) => {
+    if (Platform.OS === "web") {
+      alert(`${title}: ${message}`); // Basic alert for web
+    } else {
+      Alert.alert(title, message); // Mobile-specific alert
     }
   };
 
@@ -152,6 +160,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "absolute",
     bottom: 0,
+
   },
   boxText: {
     color: "#fff",

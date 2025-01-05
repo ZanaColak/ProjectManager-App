@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useGlobalSearchParams } from "expo-router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
   faChessBoard,
   faBars,
@@ -41,7 +41,10 @@ export default function Dashboard() {
       adminOnly: false,
       icon: faTimeline,
     },
-    { label: "Hold", value: "team", adminOnly: false, icon: faBars },
+    { label: "Hold",
+      value: "team",
+      adminOnly: false,
+      icon: faBars },
     {
       label: "Scrum board",
       value: "scrumboard",
@@ -60,39 +63,39 @@ export default function Dashboard() {
   };
 
   return (
-    <View style={styles.container}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#173630" />
-      ) : (
-        <>
-          <Text style={styles.title}>Dashboard - {department}</Text>
-          <ScrollView style={styles.buttonContainer}>
-            {choices
-              .filter((item) => !item.adminOnly || role === "admin")
-              .map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.button}
-                  onPress={() => handleNavigation(item.value)}
-                >
-                  <FontAwesomeIcon
-                    icon={item.icon}
-                    size="sm"
-                    color="#fff"
-                    style={styles.icon}
-                  />
-                  <Text style={styles.buttonText}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
-          </ScrollView>
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              © 2024 Novozymes A/S, part of Novonesis Group
-            </Text>
-          </View>
-        </>
-      )}
-    </View>
+      <View style={styles.container}>
+        {loading ? (
+            <ActivityIndicator size="large" color="#173630" />
+        ) : (
+            <>
+              <Text style={styles.title}>Dashboard - {department}</Text>
+              <ScrollView style={styles.buttonContainer}>
+                {choices
+                    .filter((item) => !item.adminOnly || role === "admin")
+                    .map((item, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={styles.button}
+                            onPress={() => handleNavigation(item.value)}
+                        >
+                          <FontAwesomeIcon
+                              icon={item.icon}
+                              size={24}
+                              color="#fff"
+                              style={styles.icon}
+                          />
+                          <Text style={styles.buttonText}>{item.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+              </ScrollView>
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  © 2024 Novozymes A/S, part of Novonesis Group
+                </Text>
+              </View>
+            </>
+        )}
+      </View>
   );
 }
 
