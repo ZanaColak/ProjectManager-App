@@ -1,15 +1,5 @@
 import React, { useState } from "react";
-import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
-    TouchableOpacity,
-    ScrollView,
-    Modal,
-    Alert,
-    ActivityIndicator,
-} from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
 import { useRouter, useGlobalSearchParams } from "expo-router";
 import { fetchProjects } from "./services/dataService";
 import { addDoc, deleteDoc, updateDoc, doc, collection } from "firebase/firestore";

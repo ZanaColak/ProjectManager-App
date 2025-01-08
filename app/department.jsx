@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform, ActionSheetIOS,} from "react-native";
 import { useRouter, useGlobalSearchParams } from "expo-router";
 import { fetchDepartments } from "./services/dataService";
-import { Picker } from "@react-native-picker/picker"; // Correctly import Picker
+import { Picker } from "@react-native-picker/picker";
 
 export default function Department() {
   const [selectedDepartment, setSelectedDepartment] = useState("");
