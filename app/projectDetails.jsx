@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
-import { router, useGlobalSearchParams } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from "react-native";
+import { router, useGlobalSearchParams, useRouter} from "expo-router";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { fetchUsers } from "./services/dataService";
 import { database } from "./config/firebase";
+
 
 export default function ProjectDetails() {
     const { projectId } = useGlobalSearchParams();
@@ -12,6 +13,7 @@ export default function ProjectDetails() {
     const [error, setError] = useState(null);
     const { users: allUsers, loading: usersLoading, error: usersError } = fetchUsers();
     const [projects, setProjects] = useState([]);
+    const [editingField, setEditingField] = useState("");
 
     useEffect(() => {
         const fetchProjectDetails = async () => {
@@ -32,6 +34,24 @@ export default function ProjectDetails() {
         };
         fetchProjectDetails();
     }, [projectId]);
+
+    const handleEdit = (field) => {
+        if (editingField === field) {
+            setEditingField("");
+            saveProjectDetails(field, project[field]);
+        } else {
+            setEditingField(field);
+        }
+    };
+
+    const saveProjectDetails = async (field, value) => {
+        try {
+            const projectRef = doc(database, "projects", projectId);
+            await updateDoc(projectRef, { [field]: value });
+        } catch (error) {
+            console.error(`Error updating ${field}:`, error);
+        }
+    };
 
     if (loading || usersLoading) {
         return (
@@ -61,38 +81,96 @@ export default function ProjectDetails() {
                     style={styles.backButton}
                     onPress={() => {
                         router.push({
-                            pathname: "/scrumBoard",  // Navigate to ScrumBoard page
-                            params:  { projectId: project.id }
+                            pathname: "/scrumBoard",
+                            params: { projectId: project.id }
                         });
                     }}
                 >
                     <Text style={styles.backButtonText}>Go to Scrum board</Text>
                 </TouchableOpacity>
-
-
-
             </View>
 
             <Text style={styles.header}>{project.name}</Text>
-            <Text style={styles.description}>{project.description}</Text>
+            <View style={styles.detailContainer}>
+            <Text style={styles.label}>Description:</Text>
+                {editingField === "description" ? (
+                    <TextInput
+                        style={styles.input}
+                        value={project.description}
+                        onChangeText={(text) => setProject((prev) => ({ ...prev, description: text }))}
+                        onBlur={() => handleEdit("description")}
+                        autoFocus
+                        multiline
+                        numberOfLines={4}
+                    />
+                ) : (
+                    <TouchableOpacity onPress={() => handleEdit("description")}>
+                        <Text style={styles.text}>{project.description}</Text>
+                    </TouchableOpacity>
+                )}
+        </View>
 
-            <Text style={styles.label}>Department:</Text>
-            <Text style={styles.text}>{project.department}</Text>
 
-            <Text style={styles.label}>Deadline:</Text>
-            <Text style={styles.text}>{new Date(project.deadline).toLocaleDateString()}</Text>
+    <View style={styles.detailContainer}>
+                <Text style={styles.label}>Department:</Text>
+                {editingField === "department" ? (
+                    <TextInput
+                        style={styles.input}
+                        value={project.department}
+                        onChangeText={(text) => setProject((prev) => ({ ...prev, department: text }))}
+                        onBlur={() => handleEdit("department")}
+                        autoFocus
+                    />
+                ) : (
+                    <TouchableOpacity onPress={() => handleEdit("department")}>
+                        <Text style={styles.text}>{project.department}</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
 
-            <Text style={styles.label}>Status:</Text>
-            <Text style={styles.text}>{project.status}</Text>
+            <View style={styles.detailContainer}>
+                <Text style={styles.label}>Deadline:</Text>
+                <Text style={styles.text}>{new Date(project.deadline).toLocaleDateString()}</Text>
+            </View>
 
-            <Text style={styles.label}>Priority:</Text>
-            <Text style={styles.text}>{project.priority}</Text>
+            <View style={styles.detailContainer}>
+                <Text style={styles.label}>Status:</Text>
+                {editingField === "status" ? (
+                    <TextInput
+                        style={styles.input}
+                        value={project.status}
+                        onChangeText={(text) => setProject((prev) => ({ ...prev, status: text }))}
+                        onBlur={() => handleEdit("status")}
+                        autoFocus
+                    />
+                ) : (
+                    <TouchableOpacity onPress={() => handleEdit("status")}>
+                        <Text style={styles.text}>{project.status}</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            <View style={styles.detailContainer}>
+                <Text style={styles.label}>Priority:</Text>
+                {editingField === "priority" ? (
+                    <TextInput
+                        style={styles.input}
+                        value={project.priority}
+                        onChangeText={(text) => setProject((prev) => ({ ...prev, priority: text }))}
+                        onBlur={() => handleEdit("priority")}
+                        autoFocus
+                    />
+                ) : (
+                    <TouchableOpacity onPress={() => handleEdit("priority")}>
+                        <Text style={styles.text}>{project.priority}</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
 
             <Text style={styles.label}>Team Members:</Text>
             {teamMembers.length > 0 ? (
                 teamMembers.map((member) => (
                     <View key={member.id} style={styles.teamMemberContainer}>
-                        {/* Display member's full name */}
                         <Text style={styles.text}>{`${member.firstName || "Unknown"} ${member.lastName || "Unknown"}`}</Text>
                         <Text style={styles.text}>{member.email}</Text>
                     </View>
@@ -100,8 +178,6 @@ export default function ProjectDetails() {
             ) : (
                 <Text style={styles.text}>No team members assigned.</Text>
             )}
-
-
         </ScrollView>
     );
 }
@@ -127,6 +203,8 @@ const styles = StyleSheet.create({
     backButtonText: {
         color: "#fff",
         textAlign: "center",
-        fontSize: 14 // Reduce the font size to make the button text smaller
-    }
+        fontSize: 14
+    },
+    input: { fontSize: 16, padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#fff" },
+    detailContainer: { marginBottom: 20 },
 });
