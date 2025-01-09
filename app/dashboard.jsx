@@ -29,12 +29,12 @@ export default function Dashboard() {
       adminOnly: false,
       icon: faDiagramProject,
     },
-    {
+   /* {
       label: "Kalender",
       value: "calendar",
       adminOnly: false,
       icon: faCalendarDays,
-    },
+    },*/
     {
       label: "Tidslinje",
       value: "timeline",
@@ -88,9 +88,9 @@ export default function Dashboard() {
                         </TouchableOpacity>
                     ))}
               </ScrollView>
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>
-                  © 2024 Novozymes A/S, part of Novonesis Group
+              <View style={styles.bottomBox}>
+                <Text style={styles.boxText}>
+                  Copyright © 2024 Novozymes A/S, part of Novonesis Group
                 </Text>
               </View>
             </>
@@ -136,12 +136,19 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 10,
   },
-  footer: {
+  bottomBox: {
+    width: "100%",
+    height: 60,  // Reduced height of footer
+    backgroundColor: "#173630",
+    justifyContent: "center",
+    alignItems: "center",
     position: "absolute",
-    bottom: 20,
+    bottom: 0,
   },
-  footerText: {
-    color: "#333",
-    fontSize: 12,
+  boxText: {
+    color: "#fff",
+    fontSize: 14,
+    lineHeight: 16,
+    textAlign: "center",
   },
 });

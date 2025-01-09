@@ -9,8 +9,12 @@ import {
     Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import {fetchProjects} from "./services/dataService";
 
-export default function Scrumboard() {
+export default function ScrumBoard() {
+
+    const { projects, loading, error } = fetchProjects(department);
+
     const [columns, setColumns] = useState([
         { id: "todo", name: "Backlog", tasks: [] },
         { id: "inprogress", name: "Igangværende", tasks: [] },

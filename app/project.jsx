@@ -19,20 +19,37 @@ export default function Projects() {
     const handleError = (message) => {
         router.push({ pathname: "/components/error", params: { message } });
     };
+    const viewProjectDetails = (project) => {
+        router.push({
+            pathname: "/projectDetails",
+            params: { projectId: project.id, projectName: project.name }
+        });
+    };
+
 
     const createProject = async () => {
-        if (projectName && projectDescription) {
+        if (projectName && projectDescription && projectDeadline && projectPriority && projectBudget) {
             try {
                 await addDoc(collection(database, "projects"), {
                     name: projectName,
                     description: projectDescription,
                     owner: uid,
                     department,
+                    deadline: projectDeadline,
+                    status: "Not Started",
+                    priority: projectPriority,
+                    budget: projectBudget,
+                    teamMembers: [],
                     createdAt: new Date(),
                 });
+
+                // Reset form values
                 setProjectName("");
                 setProjectDescription("");
-                setShowAdminModal(false);
+                setProjectDeadline(""); // Reset deadline
+                setProjectPriority(""); // Reset priority
+                setProjectBudget(""); // Reset budget
+                setShowAdminModal(false); // Close the modal after creating project
             } catch (error) {
                 handleError("Failed to create project.");
                 console.error("Error creating project:", error);
@@ -102,20 +119,21 @@ export default function Projects() {
             <ScrollView style={styles.list}>
                 {projects.map((project) => (
                     <View style={styles.projectItemContainer} key={project.id}>
-                        <View style={styles.projectItem}>
-                            <Text style={styles.projectText}>
-                                {project.name.length > 30 ? `${project.name.substring(0, 30)}...` : project.name}
-                                {project.description && project.description.length > 0 && (
-                                    <Text style={styles.projectDescription}>
-                                        {" "}
-                                        -{" "}
-                                        {project.description.length > 30
-                                            ? `${project.description.substring(0, 30)}...`
-                                            : project.description}
-                                    </Text>
-                                )}
-                            </Text>
-                        </View>
+                        <TouchableOpacity onPress={() => viewProjectDetails(project)}>
+                            <View style={styles.projectItem}>
+                                <Text style={styles.projectText}>
+                                    {project.name.length > 30 ? `${project.name.substring(0, 30)}...` : project.name}
+                                    {project.description && project.description.length > 0 && (
+                                        <Text style={styles.projectDescription}>
+                                            {" "}-{" "}
+                                            {project.description.length > 30
+                                                ? `${project.description.substring(0, 30)}...`
+                                                : project.description}
+                                        </Text>
+                                    )}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
 
                         {role === "admin" && (
                             <>
@@ -137,6 +155,7 @@ export default function Projects() {
                 ))}
             </ScrollView>
 
+
             {role === "admin" && (
                 <Modal visible={showAdminModal} animationType="slide" transparent>
                     <View style={styles.modalContainer}>
@@ -153,6 +172,28 @@ export default function Projects() {
                                 value={projectDescription}
                                 onChangeText={setProjectDescription}
                             />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Project Deadline"
+                                value={projectDeadline}
+                                onChangeText={setProjectDeadline}
+                            />
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Priority (Low, Medium, High)"
+                                value={projectPriority}
+                                onChangeText={setProjectPriority}
+                            />
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Budget"
+                                value={projectBudget}
+                                keyboardType="numeric"
+                                onChangeText={setProjectBudget}
+                            />
+
                             <TouchableOpacity
                                 style={styles.addButton}
                                 onPress={editingProject ? updateProject : createProject}
@@ -174,6 +215,11 @@ export default function Projects() {
                     </View>
                 </Modal>
             )}
+            <View style={styles.bottomBox}>
+                <Text style={styles.boxText}>
+                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
+                </Text>
+            </View>
         </View>
     );
 }
@@ -282,5 +328,20 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontSize: 16,
         fontWeight: "bold",
+    },
+    bottomBox: {
+        width: "100%",
+        height: 60,
+        backgroundColor: "#173630",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "absolute",
+        bottom: 0,
+    },
+    boxText: {
+        color: "#fff",
+        fontSize: 14,
+        lineHeight: 16,
+        textAlign: "center",
     },
 });
