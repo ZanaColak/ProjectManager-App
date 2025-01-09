@@ -260,8 +260,7 @@ export default function Timeline() {
             </Modal>
 
             {/* Project Filter Modal */}
-            <Modal
-                visible={isProjectModalVisible}
+            <Modal visible={isProjectModalVisible}
                 onRequestClose={() => setIsProjectModalVisible(false)}
                 animationType="slide"
             >

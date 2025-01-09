@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
-import { useGlobalSearchParams } from "expo-router";
+import { router, useGlobalSearchParams } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { fetchUsers } from "./services/dataService";
 import { database } from "./config/firebase";
@@ -11,6 +11,7 @@ export default function ProjectDetails() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { users: allUsers, loading: usersLoading, error: usersError } = fetchUsers();
+    const [projects, setProjects] = useState([]);
 
     useEffect(() => {
         const fetchProjectDetails = async () => {
@@ -56,9 +57,20 @@ export default function ProjectDetails() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.push("/projects")}>
                     <Text style={styles.backButtonText}>Back to Projects</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.push("/scrumBoard")}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => {
+                        router.push({
+                            pathname: "/scrumBoard",  // Navigate to ScrumBoard page
+                            params:  { projectId: project.id }
+                        });
+                    }}
+                >
                     <Text style={styles.backButtonText}>Go to Scrum board</Text>
                 </TouchableOpacity>
+
+
+
             </View>
 
             <Text style={styles.header}>{project.name}</Text>
@@ -75,9 +87,6 @@ export default function ProjectDetails() {
 
             <Text style={styles.label}>Priority:</Text>
             <Text style={styles.text}>{project.priority}</Text>
-
-            <Text style={styles.label}>Budget:</Text>
-            <Text style={styles.text}>${project.budget}</Text>
 
             <Text style={styles.label}>Team Members:</Text>
             {teamMembers.length > 0 ? (
@@ -121,4 +130,3 @@ const styles = StyleSheet.create({
         fontSize: 14 // Reduce the font size to make the button text smaller
     }
 });
-

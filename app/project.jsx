@@ -10,6 +10,8 @@ export default function Projects() {
     const { uid, department, role } = useGlobalSearchParams();
     const [projectName, setProjectName] = useState("");
     const [projectDescription, setProjectDescription] = useState("");
+    const [projectDeadline, setProjectDeadline] = useState(""); // Added state for deadline
+    const [projectPriority, setProjectPriority] = useState("");
     const [editingProject, setEditingProject] = useState(null);
     const [showAdminModal, setShowAdminModal] = useState(false);
     const router = useRouter();
@@ -26,11 +28,10 @@ export default function Projects() {
         });
     };
 
-
     const createProject = async () => {
-        if (projectName && projectDescription && projectDeadline && projectPriority && projectBudget) {
+        if (projectName && projectDescription && projectDeadline && projectPriority) {
             try {
-                await addDoc(collection(database, "projects"), {
+                const docRef = await addDoc(collection(database, "projects"), {
                     name: projectName,
                     description: projectDescription,
                     owner: uid,
@@ -38,17 +39,18 @@ export default function Projects() {
                     deadline: projectDeadline,
                     status: "Not Started",
                     priority: projectPriority,
-                    budget: projectBudget,
                     teamMembers: [],
                     createdAt: new Date(),
                 });
+
+                const projectId = docRef.id;
+                console.log("Project created with ID:", projectId);
 
                 // Reset form values
                 setProjectName("");
                 setProjectDescription("");
                 setProjectDeadline(""); // Reset deadline
                 setProjectPriority(""); // Reset priority
-                setProjectBudget(""); // Reset budget
                 setShowAdminModal(false); // Close the modal after creating project
             } catch (error) {
                 handleError("Failed to create project.");
@@ -72,6 +74,8 @@ export default function Projects() {
         setEditingProject(project);
         setProjectName(project.name);
         setProjectDescription(project.description);
+        setProjectDeadline(project.deadline); // Populate the deadline field
+        setProjectPriority(project.priority); // Populate the priority field
         setShowAdminModal(true);
     };
 
@@ -82,11 +86,15 @@ export default function Projects() {
                 await updateDoc(projectRef, {
                     name: projectName,
                     description: projectDescription,
+                    deadline: projectDeadline, // Update deadline
+                    priority: projectPriority, // Update priority
                     updatedAt: new Date(),
                 });
                 setEditingProject(null);
                 setProjectName("");
                 setProjectDescription("");
+                setProjectDeadline(""); // Reset deadline after update
+                setProjectPriority(""); // Reset priority
                 setShowAdminModal(false);
             } catch (error) {
                 Alert.alert("Error", "Failed to update project.");
@@ -155,7 +163,6 @@ export default function Projects() {
                 ))}
             </ScrollView>
 
-
             {role === "admin" && (
                 <Modal visible={showAdminModal} animationType="slide" transparent>
                     <View style={styles.modalContainer}>
@@ -176,7 +183,7 @@ export default function Projects() {
                                 style={styles.input}
                                 placeholder="Project Deadline"
                                 value={projectDeadline}
-                                onChangeText={setProjectDeadline}
+                                onChangeText={setProjectDeadline} // Bind deadline state
                             />
 
                             <TextInput
@@ -184,14 +191,6 @@ export default function Projects() {
                                 placeholder="Priority (Low, Medium, High)"
                                 value={projectPriority}
                                 onChangeText={setProjectPriority}
-                            />
-
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Budget"
-                                value={projectBudget}
-                                keyboardType="numeric"
-                                onChangeText={setProjectBudget}
                             />
 
                             <TouchableOpacity
@@ -207,6 +206,7 @@ export default function Projects() {
                                     setEditingProject(null);
                                     setProjectName("");
                                     setProjectDescription("");
+                                    setProjectDeadline(""); // Reset deadline when canceling
                                 }}
                             >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>

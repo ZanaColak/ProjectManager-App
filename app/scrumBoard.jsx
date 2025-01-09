@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     StyleSheet,
     View,
@@ -9,15 +9,23 @@ import {
     Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { fetchProjects } from "./services/dataService";
-import { useRouter, useGlobalSearchParams } from "expo-router";
+import { fetchProjects } from "./services/dataService";  // Sørg for at denne funktion findes og fungerer
+import { useGlobalSearchParams } from "expo-router";
 
 export default function ScrumBoard() {
     const { uid, department, role } = useGlobalSearchParams();
-    const { projects, loading, error } = fetchProjects(department);
-    const router = useRouter();
-    const [selectedProject, setSelectedProject] = useState("");
-    const [projectsModalVisible, setProjectsModalVisible] = useState(false);
+    const { projects } = fetchProjects(department);  // Hent projekter for afdeling
+    const [newTask, setNewTask] = useState("");
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [loading, setLoading] = useState(true); // Loader status
+    const [error, setError] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [newColumnModalVisible, setNewColumnModalVisible] = useState(false);
+    const [newColumnName, setNewColumnName] = useState("");
+    const [newColumnPosition, setNewColumnPosition] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [selectedProject, setSelectedProject] = useState(null);
+    const [projectModalVisible, setProjectModalVisible] = useState(false);
 
     const [columns, setColumns] = useState([
         { id: "todo", name: "Backlog", tasks: [] },
@@ -26,13 +34,28 @@ export default function ScrumBoard() {
         { id: "done", name: "Færdig", tasks: [] },
         { id: "blocked", name: "Blokeret", tasks: [] },
     ]);
-    const [newTask, setNewTask] = useState("");
-    const [selectedTask, setSelectedTask] = useState(null);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [newColumnModalVisible, setNewColumnModalVisible] = useState(false);
-    const [newColumnName, setNewColumnName] = useState("");
-    const [newColumnPosition, setNewColumnPosition] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
+
+    useEffect(() => {
+        const fetchProjectData = async () => {
+            setLoading(true);  // Start loader, hvis vi begynder at hente projekter
+            setErrorMessage("");  // Nulstil fejlhåndtering, hvis der tidligere var en fejl
+
+            try {
+                const response = await fetchProjects(department); // Hent projekter
+                if (response && response.length > 0) {
+                    setProjects(response);  // Opdater projekter
+                    setSelectedProject(response[0]); // Vælg første projekt som standard
+                } else {
+                    setErrorMessage("Ingen projekter fundet.");  // Ingen projekter er fundet
+                }
+                setLoading(false);  // Stop loader
+            } catch (err) {
+                setLoading(false);  // Stop loader
+            }
+        };
+
+        fetchProjectData();
+    }, [department]);
 
     const addTaskToBacklog = () => {
         if (!newTask.trim()) {
@@ -103,24 +126,17 @@ export default function ScrumBoard() {
         setModalVisible(true);
     };
 
-    const fetchTasksForProject = (projectName) => {
-        const project = projects.find((p) => p.name === projectName);
-        if (project) {
-            const updatedColumns = columns.map((column) => ({
-                ...column,
-                tasks: project.tasks.filter((task) => task.columnId === column.id),
-            }));
-            setColumns(updatedColumns);
-            setSelectedProject(projectName);
-            setProjectsModalVisible(false);
-        } else {
-            setErrorMessage("Ingen opgaver fundet for det valgte projekt.");
-        }
+    const handleProjectSelect = (project) => {
+        setSelectedProject(project);  // Opdater det valgte projekt
+        setProjectModalVisible(false);  // Luk modalen
     };
+
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>Scrumboard</Text>
+            <Text style={styles.header}>
+                Scrumboard - {selectedProject ? selectedProject.name : "Vælg et projekt"}
+            </Text>
 
             <View style={styles.addTaskContainer}>
                 <TextInput
@@ -143,10 +159,10 @@ export default function ScrumBoard() {
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={[styles.button, { marginBottom: 20 }]}
-                onPress={() => setProjectsModalVisible(true)}
+                style={styles.button}
+                onPress={() => setProjectModalVisible(true)} // Åben modal
             >
-                <Text style={styles.buttonText}>Vælg projekt og hent opgaver</Text>
+                <Text style={styles.buttonText}>Vælg et projekt</Text>
             </TouchableOpacity>
 
             <View style={styles.board}>
@@ -167,27 +183,6 @@ export default function ScrumBoard() {
                     </View>
                 ))}
             </View>
-
-            <Modal visible={projectsModalVisible} animationType="slide">
-                <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Vælg projekt</Text>
-                    {projects.map((project) => (
-                        <TouchableOpacity
-                            key={project.id}
-                            style={styles.button}
-                            onPress={() => fetchTasksForProject(project.name)}
-                        >
-                            <Text style={styles.buttonText}>{project.name}</Text>
-                        </TouchableOpacity>
-                    ))}
-                    <TouchableOpacity
-                        style={[styles.button, { backgroundColor: "red" }]}
-                        onPress={() => setProjectsModalVisible(false)}
-                    >
-                        <Text style={styles.buttonText}>Annuller</Text>
-                    </TouchableOpacity>
-                </View>
-            </Modal>
 
             <Modal visible={newColumnModalVisible} animationType="slide">
                 <View style={styles.modalContent}>
@@ -217,6 +212,39 @@ export default function ScrumBoard() {
                     </TouchableOpacity>
                 </View>
             </Modal>
+
+            {/* Modal for at vælge projekt */}
+            <Modal visible={projectModalVisible} animationType="slide">
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Vælg et projekt</Text>
+
+                    {loading ? (
+                        <Text>Indlæser projekter...</Text>
+                    ) : error ? (
+                        <Text>{error}</Text>
+                    ) : (
+                        <FlatList
+                            data={projects}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity onPress={() => handleProjectSelect(item)}>
+                                    <View style={styles.projectCard}>
+                                        <Text style={styles.projectName}>{item.name}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            keyExtractor={(item) => item.id.toString()}
+                        />
+                    )}
+
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: "red", marginTop: 20 }]}
+                        onPress={() => setProjectModalVisible(false)}  // Luk modalen
+                    >
+                        <Text style={styles.buttonText}>Luk</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
 
             <View style={styles.bottomBox}>
                 <Text style={styles.boxText}>
