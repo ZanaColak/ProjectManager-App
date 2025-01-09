@@ -28,7 +28,7 @@ export default function Timeline() {
         // Fetching task data if necessary
         const fetchData = async () => {
             try {
-                const { tasksData } = await fetchTasks(department); // Assuming fetchTasks is similar to fetchProjects
+                const { tasksData } = await fetchTasks(department);
                 setTasks(tasksData);
             } catch (err) {
                 console.error("Error fetching tasks:", err);
@@ -181,7 +181,7 @@ export default function Timeline() {
                 {/* Project Filter */}
                 <TouchableOpacity onPress={() => setIsProjectModalVisible(true)} style={styles.filterButton}>
                     <Text style={styles.filterLabel}>
-                        {selectedProject ? `Project: ${selectedProject}` : "Select Project"}
+                        {selectedProject ? `Project: ${selectedProject}` : "Vælg projekt"}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -260,13 +260,12 @@ export default function Timeline() {
             </Modal>
 
             {/* Project Filter Modal */}
-            <Modal
-                visible={isProjectModalVisible}
+            <Modal visible={isProjectModalVisible}
                 onRequestClose={() => setIsProjectModalVisible(false)}
                 animationType="slide"
             >
                 <View style={styles.modalContainer}>
-                    <Text style={styles.modalHeader}>Select Project</Text>
+                    <Text style={styles.modalHeader}>Vælg projekt</Text>
                     {loading && <Text>Loading projects...</Text>}
                     {error && <Text>Error loading projects: {error.message}</Text>}
                     {!loading &&
