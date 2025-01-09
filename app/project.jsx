@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal } from "react-native";
-import {router, useGlobalSearchParams} from "expo-router";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
+import { useRouter, useGlobalSearchParams } from "expo-router";
 import { fetchProjects } from "./services/dataService";
-import {addDoc, deleteDoc, updateDoc, doc, collection} from "firebase/firestore";
+import { addDoc, deleteDoc, updateDoc, doc, collection } from "firebase/firestore";
 import Icon from "react-native-vector-icons/FontAwesome";
-import {database} from "./config/firebase";
+import { database } from "./config/firebase";
 
 export default function Projects() {
     const { uid, department, role } = useGlobalSearchParams();
@@ -12,6 +12,7 @@ export default function Projects() {
     const [projectDescription, setProjectDescription] = useState("");
     const [editingProject, setEditingProject] = useState(null);
     const [showAdminModal, setShowAdminModal] = useState(false);
+    const router = useRouter();
 
     const { projects, loading, error } = fetchProjects(department);
 
@@ -33,7 +34,7 @@ export default function Projects() {
                 setProjectDescription("");
                 setShowAdminModal(false);
             } catch (error) {
-                handleError(error.name, "Error", "Failed to create project.");
+                handleError("Failed to create project.");
                 console.error("Error creating project:", error);
             }
         } else {
@@ -83,34 +84,39 @@ export default function Projects() {
         <View style={styles.container}>
             <Text style={styles.header}>Projects - {department}</Text>
 
-            {/* Admin Icon to Open the Modal */}
             {role === "admin" && (
                 <TouchableOpacity style={styles.adminIcon} onPress={() => setShowAdminModal(true)}>
                     <Icon name="plus-circle" size={30} color="#173630" />
                 </TouchableOpacity>
             )}
 
-            {loading && <Text>Loading...</Text>}
-            {error && <Text>Error loading projects.</Text>}
+            {loading && (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#173630" />
+                    <Text>Loading Projects...</Text>
+                </View>
+            )}
+
+            {error && <Text style={styles.errorText}>Error loading projects.</Text>}
 
             <ScrollView style={styles.list}>
                 {projects.map((project) => (
                     <View style={styles.projectItemContainer} key={project.id}>
                         <View style={styles.projectItem}>
                             <Text style={styles.projectText}>
-                                {project.name.length > 30
-                                    ? `${project.name.substring(0, 30)}...`
-                                    : project.name}
+                                {project.name.length > 30 ? `${project.name.substring(0, 30)}...` : project.name}
                                 {project.description && project.description.length > 0 && (
-                                    <Text style={{ fontSize: 12, color: "#999" }}>
+                                    <Text style={styles.projectDescription}>
                                         {" "}
-                                        - {project.description.length > 30 ? `${project.description.substring(0, 30)}...` : project.description}
+                                        -{" "}
+                                        {project.description.length > 30
+                                            ? `${project.description.substring(0, 30)}...`
+                                            : project.description}
                                     </Text>
                                 )}
                             </Text>
                         </View>
 
-                        {/* Edit/Delete Icons for Admins */}
                         {role === "admin" && (
                             <>
                                 <TouchableOpacity
@@ -131,7 +137,6 @@ export default function Projects() {
                 ))}
             </ScrollView>
 
-            {/* Admin Modal for Creating/Editing Projects */}
             {role === "admin" && (
                 <Modal visible={showAdminModal} animationType="slide" transparent>
                     <View style={styles.modalContainer}>
@@ -152,9 +157,7 @@ export default function Projects() {
                                 style={styles.addButton}
                                 onPress={editingProject ? updateProject : createProject}
                             >
-                                <Text style={styles.addButtonText}>
-                                    {editingProject ? "Update" : "Create"}
-                                </Text>
+                                <Text style={styles.addButtonText}>{editingProject ? "Update" : "Create"}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.cancelButton}
@@ -194,6 +197,16 @@ const styles = StyleSheet.create({
         marginRight: 20,
         marginBottom: 10,
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    errorText: {
+        color: "red",
+        textAlign: "center",
+        marginBottom: 20,
+    },
     list: {
         flex: 1,
     },
@@ -214,6 +227,10 @@ const styles = StyleSheet.create({
     projectText: {
         fontSize: 16,
         color: "#173630",
+    },
+    projectDescription: {
+        fontSize: 12,
+        color: "#999",
     },
     editButton: {
         marginRight: 10,
@@ -241,7 +258,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 10,
         backgroundColor: "#ededed",
-        color: "#000000",
+        color: "#000",
     },
     addButton: {
         paddingVertical: 10,

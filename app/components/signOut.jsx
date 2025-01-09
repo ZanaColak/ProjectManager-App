@@ -1,13 +1,13 @@
-import {signOut} from "firebase/auth";
-import {auth} from "../config/firebase";
+import { signOut } from "firebase/auth";
+import { auth } from "../config/firebase";
 
 export const signingOut = async (router) => {
     try {
         await signOut(auth);
+
         if (router) {
             router.push("/");
-            sessionStorage.clear();
-            localStorage.clear();
+
         } else {
             console.warn("Router is not defined. Unable to redirect after sign-out.");
         }

@@ -1,41 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform, ActionSheetIOS,} from "react-native";
 import { useRouter, useGlobalSearchParams } from "expo-router";
-import { collection, doc, getDoc } from "firebase/firestore";
-import { database } from "./config/firebase";
+import { fetchDepartments } from "./services/dataService";
+import { Picker } from "@react-native-picker/picker";
 
 export default function Department() {
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { uid, role } = useGlobalSearchParams();
 
-  // Fetch accessible departments from Firestore
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const userRef = doc(database, "users", uid);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          const allowedDepartments = userSnap.data().departments || []; // Array of accessible departments
-          setDepartments(allowedDepartments.map((dep) => ({ label: dep, value: dep })));
-        } else {
-          console.error("User not found in Firestore.");
-          Alert.alert("Fejl", "Brugerdata ikke fundet.");
-        }
-      } catch (error) {
-        console.error("Error fetching departments:", error);
-        Alert.alert("Fejl", "Kunne ikke hente afdelinger.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDepartments();
-  }, [uid]);
+  // Fetch departments dynamically
+  const { departments, loading, error } = fetchDepartments();
 
   const handleConfirmSelection = () => {
     if (selectedDepartment) {
@@ -44,7 +19,34 @@ export default function Department() {
         params: { department: selectedDepartment, uid, role },
       });
     } else {
-      Alert.alert("Fejl", "Vælg venligst en afdeling.");
+      showAlert("Fejl", "Vælg venligst en afdeling.");
+    }
+  };
+
+  const showAlert = (title, message) => {
+    if (Platform.OS === "web") {
+      alert(`${title}: ${message}`); // Basic alert for web
+    } else {
+      Alert.alert(title, message); // Mobile-specific alert
+    }
+  };
+
+  const openActionSheet = () => {
+    if (Platform.OS === "ios") {
+      const options = departments.map((department) => department.name);
+      options.push("Annuller");
+
+      ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options,
+            cancelButtonIndex: options.length - 1,
+          },
+          (buttonIndex) => {
+            if (buttonIndex < departments.length) {
+              setSelectedDepartment(departments[buttonIndex].name);
+            }
+          }
+      );
     }
   };
 
@@ -57,33 +59,61 @@ export default function Department() {
     );
   }
 
+  if (error) {
+    return (
+        <View style={styles.errorContainer}>
+          <Text>Kunne ikke hente afdelinger.</Text>
+          <Text>{error.message}</Text>
+        </View>
+    );
+  }
+
   return (
       <View style={styles.container}>
         <Text style={styles.headerText}>Vælg afdeling</Text>
 
-        <View style={styles.dropdownContainer}>
-          <Picker
-              selectedValue={selectedDepartment}
-              onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
-              style={styles.picker}
-          >
-            <Picker.Item label="Vælg en afdeling" value="" />
-            {departments.map((department, index) => (
-                <Picker.Item key={index} label={department.label} value={department.value} />
-            ))}
-          </Picker>
-        </View>
+        {Platform.OS === "ios" ? (
+            <TouchableOpacity
+                style={styles.dropdownContainer}
+                onPress={openActionSheet}
+            >
+              <Text style={styles.pickerText}>
+                {selectedDepartment || "Vælg en afdeling"}
+              </Text>
+            </TouchableOpacity>
+        ) : (
+            <View style={styles.dropdownContainer}>
+              <Picker
+                  selectedValue={selectedDepartment}
+                  onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
+                  style={styles.picker}
+              >
+                <Picker.Item label="Vælg en afdeling" value="" />
+                {departments.map((department, index) => (
+                    <Picker.Item
+                        key={index}
+                        label={department.name}
+                        value={department.name}
+                    />
+                ))}
+              </Picker>
+            </View>
+        )}
 
         <TouchableOpacity style={styles.button} onPress={handleConfirmSelection}>
           <Text style={styles.buttonText}>Bekræft valg</Text>
         </TouchableOpacity>
 
         {selectedDepartment ? (
-            <Text style={styles.selectionText}>Du har valgt: {selectedDepartment}</Text>
+            <Text style={styles.selectionText}>
+              Du har valgt: {selectedDepartment}
+            </Text>
         ) : null}
 
         <View style={styles.bottomBox}>
-          <Text style={styles.boxText}>Copyright © 2024 Novozymes A/S, part of Novonesis Group</Text>
+          <Text style={styles.boxText}>
+            Copyright © 2024 Novozymes A/S, part of Novonesis Group
+          </Text>
         </View>
       </View>
   );
@@ -103,6 +133,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
   headerText: {
     fontSize: 22,
     fontWeight: "bold",
@@ -118,10 +154,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
     marginBottom: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   picker: {
     width: "100%",
     height: 50,
+  },
+  pickerText: {
+    fontSize: 16,
+    color: "#555",
+    textAlign: "center",
   },
   selectionText: {
     marginTop: 20,
