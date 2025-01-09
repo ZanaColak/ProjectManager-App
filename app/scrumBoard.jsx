@@ -9,11 +9,15 @@ import {
     Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import {fetchProjects} from "./services/dataService";
+import { fetchProjects } from "./services/dataService";
+import { useRouter, useGlobalSearchParams } from "expo-router";
 
 export default function ScrumBoard() {
-
+    const { uid, department, role } = useGlobalSearchParams();
     const { projects, loading, error } = fetchProjects(department);
+    const router = useRouter();
+    const [selectedProject, setSelectedProject] = useState("");
+    const [projectsModalVisible, setProjectsModalVisible] = useState(false);
 
     const [columns, setColumns] = useState([
         { id: "todo", name: "Backlog", tasks: [] },
@@ -99,6 +103,21 @@ export default function ScrumBoard() {
         setModalVisible(true);
     };
 
+    const fetchTasksForProject = (projectName) => {
+        const project = projects.find((p) => p.name === projectName);
+        if (project) {
+            const updatedColumns = columns.map((column) => ({
+                ...column,
+                tasks: project.tasks.filter((task) => task.columnId === column.id),
+            }));
+            setColumns(updatedColumns);
+            setSelectedProject(projectName);
+            setProjectsModalVisible(false);
+        } else {
+            setErrorMessage("Ingen opgaver fundet for det valgte projekt.");
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.header}>Scrumboard</Text>
@@ -123,6 +142,13 @@ export default function ScrumBoard() {
                 <Text style={styles.buttonText}>Opret ny kolonne</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+                style={[styles.button, { marginBottom: 20 }]}
+                onPress={() => setProjectsModalVisible(true)}
+            >
+                <Text style={styles.buttonText}>Vælg projekt og hent opgaver</Text>
+            </TouchableOpacity>
+
             <View style={styles.board}>
                 {columns.map((column) => (
                     <View key={column.id} style={styles.column}>
@@ -141,6 +167,27 @@ export default function ScrumBoard() {
                     </View>
                 ))}
             </View>
+
+            <Modal visible={projectsModalVisible} animationType="slide">
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Vælg projekt</Text>
+                    {projects.map((project) => (
+                        <TouchableOpacity
+                            key={project.id}
+                            style={styles.button}
+                            onPress={() => fetchTasksForProject(project.name)}
+                        >
+                            <Text style={styles.buttonText}>{project.name}</Text>
+                        </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: "red" }]}
+                        onPress={() => setProjectsModalVisible(false)}
+                    >
+                        <Text style={styles.buttonText}>Annuller</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
 
             <Modal visible={newColumnModalVisible} animationType="slide">
                 <View style={styles.modalContent}>

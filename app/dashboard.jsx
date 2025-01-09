@@ -47,7 +47,7 @@ export default function Dashboard() {
       icon: faBars },
     {
       label: "Scrum board",
-      value: "scrumboard",
+      value: "scrumBoard",
       adminOnly: false,
       icon: faChessBoard,
     },
