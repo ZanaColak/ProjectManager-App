@@ -272,6 +272,7 @@ const styles = StyleSheet.create({
     taskItem: {
         flex: 1,
     },
+
     taskText: {
         fontSize: 16,
         color: "#173630",
