@@ -79,6 +79,7 @@ export default function Tasks() {
         setShowAdminModal(true);
     };
 
+
     const updateTask = async () => {
         if (taskName && taskDescription && editingTask) {
             try {
