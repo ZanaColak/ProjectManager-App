@@ -1,13 +1,13 @@
 import { auth, database } from "../config/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import {doc, setDoc, deleteDoc, updateDoc} from "firebase/firestore";
+import { doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { showAlert } from "../components/utill";
 
 export const createUser = async (userData, onSuccess, onError) => {
     const { firstName, lastName, email, password, userRole, userDepartments } = userData;
 
     if (!firstName || !lastName || !email || password.length < 6 || userDepartments.length === 0) {
-        showAlert("Error", "All fields must be filled, and password must be at least 6 characters long.");
+        showAlert("Fejl", "Alle felter skal udfyldes, og adgangskoden skal være mindst 6 tegn lang.");
         return;
     }
 
@@ -26,11 +26,11 @@ export const createUser = async (userData, onSuccess, onError) => {
         });
 
         onSuccess?.();
-        showAlert("Success", "User created successfully.");
+        showAlert("Succes", "Bruger oprettet succesfuldt.");
     } catch (error) {
         console.error("Error creating user:", error);
         onError?.(error.message);
-        showAlert("Error", `Failed to create user: ${error.message}`);
+        showAlert("Fejl", `Kunne ikke oprette bruger: ${error.message}`);
     }
 };
 
@@ -38,11 +38,11 @@ export const deleteUser = async (id, onSuccess, onError) => {
     try {
         await deleteDoc(doc(database, "users", id));
         onSuccess?.();
-        showAlert("Success", "User deleted successfully.");
+        showAlert("Succes", "Bruger slettet succesfuldt.");
     } catch (error) {
         console.error("Error deleting user:", error);
         onError?.(error.message);
-        showAlert("Error", `Failed to delete user: ${error.message}`);
+        showAlert("Fejl", `Kunne ikke slette bruger: ${error.message}`);
     }
 };
 
@@ -54,10 +54,10 @@ export const updateUserDetails = async (userId, field, value, onSuccess, onError
         await updateDoc(userRef, updateData);
 
         if (onSuccess) onSuccess();
-        showAlert("Success", `${field} updated successfully.`);
+        showAlert("Succes", `${field} opdateret succesfuldt.`);
     } catch (error) {
         console.error(`Error updating ${field}:`, error);
         if (onError) onError(error.message);
-        showAlert("Error", `Failed to update ${field}: ${error.message}`);
+        showAlert("Fejl", `Kunne ikke opdatere ${field}: ${error.message}`);
     }
 };
