@@ -8,6 +8,7 @@ import { database } from "./config/firebase";
 import { Picker } from "@react-native-picker/picker";
 import { showAlert } from './config/utill';
 
+
 export default function ProjectDetails() {
     const { projectId } = useGlobalSearchParams();
     const [project, setProject] = useState(null);
