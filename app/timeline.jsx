@@ -1,319 +1,164 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
-import { fetchProjects } from "./services/dataService";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
-import Icon from "react-native-vector-icons/FontAwesome";
-import { useGlobalSearchParams } from "expo-router";
+import { StyleSheet, View, Text } from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import { collection, getDocs } from "firebase/firestore";
+import { useCollection } from "react-firebase-hooks/firestore";
+import Timeline from "react-native-timeline-flatlist";
 import { database } from "./config/firebase";
 
-export default function Timeline() {
-    const { uid, department, role } = useGlobalSearchParams(); // Get params from URL
-    const { loading: projectsLoading, error } = fetchProjects(department);
-    const [selectedProject, setSelectedProject] = useState(""); // Track selected project
-    const [filterType, setFilterType] = useState("all");
-    const [timeFilter, setTimeFilter] = useState(7); // Default to 1 week
-    const [selectedDepartment, setSelectedDepartment] = useState(null);
-    const [filteredData, setFilteredData] = useState([]);
+export default function TimelineScreen() {
     const [tasks, setTasks] = useState([]);
-    const [departments, setDepartments] = useState([]);
-    const [loading, setLoading] = useState(true); // Define loading state
     const [projects, setProjects] = useState([]);
+    const [selectedProject, setSelectedProject] = useState(null);
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const [isFilterTypeModalVisible, setIsFilterTypeModalVisible] = useState(false);
-    const [isTeamMemberModalVisible, setIsTeamMemberModalVisible] = useState(false);
-    const [isProjectModalVisible, setIsProjectModalVisible] = useState(false); // Project filter modal visibility
     const projectQuery = collection(database, "projects");
-    const timelineQuery = selectedProject && collection(database, `projects/${selectedProject.id}/timeline`);
+    const [projectSnapshot] = useCollection(projectQuery);
 
     useEffect(() => {
-        const fetchProjects = async () => {
-            const projectSnapshot = await getDocs(projectQuery);
-            const projectList = projectSnapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            setProjects(projectList);
-        };
+        const fetchAllProjectsAndTasks = async () => {
+            if (projectSnapshot) {
+                let allProjects = [];
+                let allTasks = [];
+                const projectList = projectSnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
 
-        fetchProjects();
-    }, []);
+                setProjects(projectList);
 
-    // Fetch departments from Firestore
-    useEffect(() => {
-        const fetchDepartments = async () => {
-            try {
-                const db = getFirestore();
-                const querySnapshot = await getDocs(collection(db, "departments")); // Assuming departments are stored in 'departments' collection
-                const departmentList = querySnapshot.docs.map((doc) => doc.data().name); // Modify this based on your data structure
-                setDepartments(departmentList);
-            } catch (error) {
-                console.error("Error fetching departments: ", error);
-            } finally {
-                setLoading(false);
+                for (let project of projectList) {
+                    const taskQuery = collection(database, `projects/${project.id}/tasks`);
+                    const taskSnapshot = await getDocs(taskQuery);
+                    const projectTasks = taskSnapshot.docs.map((doc) => {
+                        const taskData = doc.data();
+                        return {
+                            id: doc.id,
+                            title: taskData.name,
+                            description: `Project: ${project.name}`,
+                            time: taskData.startDate ? new Date(taskData.startDate).toLocaleDateString() : "No Start Date",
+                            status: taskData.status,  // Ensure status is captured here
+                            priority: taskData.priority, // Ensure priority is captured
+                            ...taskData,
+                            projectId: project.id,
+                        };
+                    });
+                    allTasks = [...allTasks, ...projectTasks];
+                }
+
+                // Sort tasks by start date (valid dates only)
+                allTasks.sort((a, b) => {
+                    const dateA = new Date(a.startDate);
+                    const dateB = new Date(b.startDate);
+                    return dateA - dateB;
+                });
+
+                setTasks(allTasks);
+
+                // Set default project to the first in the list
+                if (projectList.length > 0) {
+                    setSelectedProject(projectList[0].id);
+                }
             }
         };
 
-        fetchDepartments();
-    }, []);
+        fetchAllProjectsAndTasks();
+    }, [projectSnapshot]);
 
-    const handleFilterChange = (type) => {
-        setFilterType(type);
+    // Filter tasks by selected project
+    const filteredTasks = tasks.filter(task => task.projectId === selectedProject);
 
-        if (type === "all") {
-            setFilteredData(tasks); // Show all tasks
-        } else if (type === "projectTasks" && selectedProject) {
-            const projectTasks = tasks.filter((task) => task.projectName === selectedProject);
-            setFilteredData(projectTasks); // Filter tasks for selected project
+    // Define color schemes based on status and priority
+    const getTaskColor = (status, priority) => {
+        // Status colors
+        const statusColors = {
+            "To Do": "#808080",  // Grey for To Do
+            "In Progress": "#FFA500", // Orange for In Progress
+            "Done": "#008000",  // Green for Done
+        };
+
+        // Priority colors
+        const priorityColors = {
+            "Low": "#28a745",  // Green for low priority
+            "Medium": "#ffc107",  // Yellow for medium priority
+            "High": "#dc3545",  // Red for high priority
+        };
+
+        // Default color
+        let color = "#000";  // Default color
+
+        if (status && statusColors[status]) {
+            color = statusColors[status];  // Override with status color
         }
 
-        setIsFilterTypeModalVisible(false); // Close filter type modal
-    };
-
-
-    const handleProjectChange = (project) => {
-        setSelectedProject(project);
-        const projectTasks = tasks.filter((task) => task.projectName === project);
-        setFilteredData(projectTasks); // Update filter to show only tasks for selected project
-        setIsProjectModalVisible(false);
-    };
-
-    const renderProjectTasks = () => {
-        return filteredData.map((task, index) => (
-            <TouchableOpacity key={index} onPress={() => console.log(`Task selected: ${task.name}`)}>
-                <Text style={styles.modalOption}>{task.name}</Text>
-            </TouchableOpacity>
-        ));
-    };
-
-    const handleDepartmentChange = (department) => {
-        setSelectedDepartment(department);
-        setIsTeamMemberModalVisible(false); // Close modal after selecting department
-    };
-
-    const generateTimelineDates = () => {
-        const allDates = [];
-        const allItems = [...projects, ...tasks];
-
-        let earliestStart = new Date(Math.min(...allItems.map(item => new Date(item.startDate).getTime())));
-        let latestEnd = new Date(Math.max(...allItems.map(item => new Date(item.endDate).getTime())));
-
-        earliestStart.setDate(earliestStart.getDate() - timeFilter);
-        latestEnd.setDate(latestEnd.getDate() + timeFilter);
-
-        for (let date = new Date(earliestStart); date <= latestEnd; date.setDate(date.getDate() + 1)) {
-            allDates.push(new Date(date));
+        if (priority && priorityColors[priority]) {
+            color = priorityColors[priority];  // Override with priority color
         }
 
-        return allDates;
-    };
-
-    const containerHeight = Math.max(filteredData.length * 50, 120);
-
-    const renderTimelineDates = () => {
-        const dates = generateTimelineDates();
-
-        return (
-            <View style={styles.dateRow}>
-                {dates.map((date, index) => (
-                    <View key={index} style={styles.dateColumn}>
-                        <Text style={styles.dateText}>{date.getDate()}</Text>
-                        <Text style={styles.dateText}>{date.toLocaleDateString([], { month: "short" })}</Text>
-                    </View>
-                ))}
-            </View>
-        );
-    };
-
-    const renderTimelineLine = (item, index) => {
-        const startDate = new Date(item.startDate);
-        const endDate = new Date(item.endDate);
-        const timelineStartDate = new Date(generateTimelineDates()[0]);
-        const totalTimelineDays = generateTimelineDates().length;
-
-        const offsetDays = Math.floor((startDate - timelineStartDate) / (1000 * 60 * 60 * 24));
-        const durationDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-        const offset = (offsetDays / totalTimelineDays) * 100;
-        const lineWidth = (durationDays / totalTimelineDays) * 100;
-
-        return (
-            <View
-                key={index}
-                style={{
-                    ...styles.timelineLine,
-                    left: `${offset}%`,
-                    width: `${lineWidth}%`,
-                    top: index * 50,
-                }}
-            >
-                <Text style={styles.lineText}>{item.name}</Text>
-            </View>
-        );
+        return color;
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>Project and Task Timeline</Text>
+            <Text style={styles.header}>Project Timeline</Text>
+            {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
 
-            <View style={styles.filterContainer}>
-                {/* Time Filter - Always shows 1 week */}
-                <Text style={styles.filterLabel}>Time: 1 week</Text>
-
-
-                {/* Department Filter */}
-                <TouchableOpacity onPress={() => setIsTeamMemberModalVisible(true)} style={styles.filterButton}>
-                    <Text style={styles.filterLabel}>
-                        {selectedDepartment ? `Department: ${selectedDepartment}` : "Select Department"}
-                    </Text>
-                </TouchableOpacity>
-
-
-
-                {/* Project Filter */}
-                <TouchableOpacity onPress={() => setIsProjectModalVisible(true)} style={styles.filterButton}>
-                    <Text style={styles.filterLabel}>
-                        {selectedProject ? `Project: ${selectedProject}` : "Vælg projekt"}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Team Member Modal */}
-            <Modal
-                visible={isTeamMemberModalVisible}
-                onRequestClose={() => setIsTeamMemberModalVisible(false)}
-                animationType="slide"
+            <Picker
+                selectedValue={selectedProject}
+                onValueChange={(itemValue) => setSelectedProject(itemValue)}
+                style={styles.picker}
             >
-                <View style={styles.modalContainer}>
-                    <Text style={styles.modalHeader}>Select Department</Text>
-                    {loading ? (
-                        <Text>Loading...</Text>
-                    ) : (
-                        departments.length > 0 ? (
-                            departments.map((department, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    onPress={() => handleDepartmentChange(department)}
-                                >
-                                    <Text style={styles.modalOption}>{department}</Text>
-                                </TouchableOpacity>
-                            ))
-                        ) : (
-                            <Text>No departments available</Text>
-                        )
-                    )}
-                    <TouchableOpacity onPress={() => setIsTeamMemberModalVisible(false)}>
-                        <Text style={styles.closeModal}>Close</Text>
-                    </TouchableOpacity>
-                </View>
-            </Modal>
+                {projects.map((project) => (
+                    <Picker.Item key={project.id} label={project.name} value={project.id} />
+                ))}
+            </Picker>
 
-
-            {/* Project Filter Modal */}
-            <Modal visible={isProjectModalVisible}
-                   onRequestClose={() => setIsProjectModalVisible(false)}
-                   animationType="slide"
-            >
-                <View style={styles.modalContainer}>
-                    <Text style={styles.modalHeader}>Vælg projekt</Text>
-                    {loading && <Text>Loading projects...</Text>}
-                    {error && <Text>Error loading projects: {error.message}</Text>}
-                    {!loading &&
-                        !error &&
-                        projects.map((project) => (
-                            <TouchableOpacity
-                                key={project.id}
-                                onPress={() => handleProjectChange(project.name)}
-                            >
-                                <Text style={styles.modalOption}>{project.name}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    <TouchableOpacity onPress={() => setIsProjectModalVisible(false)}>
-                        <Text style={styles.closeModal}>Close</Text>
-                    </TouchableOpacity>
-                </View>
-            </Modal>
-
-            {/* Timeline */}
-            <View style={{ ...styles.timelineLineContainer, height: containerHeight }}>
-                <View style={styles.dateContainer}>{renderTimelineDates()}</View>
-                <View style={styles.timelineContainer}>
-                    {filteredData.map(renderTimelineLine)}
-                </View>
-            </View>
+            <Timeline
+                data={filteredTasks}
+                circleSize={20}
+                // Dynamically set circle color based on status and priority
+                circleColor={(item) => getTaskColor(item.status, item.priority)}
+                lineColor="rgba(0,0,0,0.5)"
+                timeContainerStyle={{ minWidth: 72, marginTop: 0 }}
+                timeStyle={{
+                    textAlign: "center",
+                    backgroundColor: "#ff9797",
+                    color: "white",
+                    padding: 5,
+                    borderRadius: 13,
+                }}
+                descriptionStyle={{ color: "gray" }}
+                options={{
+                    style: { paddingTop: 5 },
+                }}
+                innerCircle={"dot"}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
         padding: 20,
+        backgroundColor: "#f8f9fa",
     },
     header: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: "bold",
+        marginBottom: 15,
+        color: "#173630",
+        textAlign: "center",
+    },
+    picker: {
+        height: 50,
+        width: "100%",
         marginBottom: 20,
     },
-    filterContainer: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 20,
-    },
-    filterButton: {
-        padding: 10,
-        backgroundColor: "#f0f0f0",
-        borderRadius: 5,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    filterLabel: {
+    errorMessage: {
+        color: "red",
         fontSize: 14,
-        marginLeft: 5,
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-    },
-    modalHeader: {
-        fontSize: 18,
-        marginBottom: 20,
-    },
-    modalOption: {
-        fontSize: 16,
-        marginVertical: 10,
-    },
-    closeModal: {
-        fontSize: 16,
-        color: "blue",
-        marginTop: 20,
-    },
-    dateRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingBottom: 10,
-    },
-    dateColumn: {
-        alignItems: "center",
-    },
-    dateText: {
-        fontSize: 14,
-        color: "#000",
-    },
-    timelineLineContainer: {
-        marginTop: 20,
-    },
-    timelineLine: {
-        position: "absolute",
-        backgroundColor: "lightblue",
-        paddingVertical: 5,
-        borderRadius: 5,
-    },
-    lineText: {
-        fontSize: 12,
-        color: "#000",
-    },
-    timelineContainer: {
-        position: "relative",
+        marginBottom: 10,
+        textAlign: "center",
     },
 });
