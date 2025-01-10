@@ -1,76 +1,52 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { useRouter, useGlobalSearchParams } from "expo-router";
 import { fetchProjects } from "./services/dataService";
-import { deleteProject } from "./services/projectService";
-import { addDoc, deleteDoc, updateDoc, doc, collection } from "firebase/firestore";
+import { createProject, deleteProject } from "./services/projectService";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { database } from "./config/firebase";
 
 export default function Projects() {
-    const { uid, department, role } = useGlobalSearchParams();
+    const { department, role } = useGlobalSearchParams();
+    const router = useRouter();
+    const [showCreationModal, setShowCreationModal] = useState(false);
     const [projectName, setProjectName] = useState("");
     const [projectDescription, setProjectDescription] = useState("");
-    const [projectDeadline, setProjectDeadline] = useState(""); // Tilføjet state for deadline
+    const [projectDeadline, setProjectDeadline] = useState("");
     const [projectPriority, setProjectPriority] = useState("");
-    const [editingProject, setEditingProject] = useState(null);
-    const [showAdminModal, setShowAdminModal] = useState(false);
-    const router = useRouter();
-
     const { projects, loading, error } = fetchProjects(department);
 
-    const handleError = (message) => {
-        router.push({ pathname: "/components/error", params: { message } });
-    };
+    const handleCreateProject = async () => {
+        const projectData = {
+            name: projectName,
+            description: projectDescription,
+            deadline: projectDeadline,
+            priority: projectPriority,
+            department,
+        };
 
-    const viewProjectDetails = (project) => {
-        router.push({
-            pathname: "/projectDetails",
-            params: { projectId: project.id, projectName: project.name }
+        await createProject(projectData, () => {
+            setProjectName("");
+            setProjectDescription("");
+            setProjectDeadline("");
+            setProjectPriority("");
+            setShowCreationModal(false);
         });
     };
 
-    const createProject = async () => {
-        if (projectName && projectDescription && projectDeadline && projectPriority) {
-            try {
-                const docRef = await addDoc(collection(database, "projects"), {
-                    name: projectName,
-                    description: projectDescription,
-                    owner: uid,
-                    department,
-                    deadline: projectDeadline,
-                    status: "Ikke startet",
-                    priority: projectPriority,
-                    createdAt: new Date(),
-                });
+    const handleDeleteProject = async (id) => {
+        await deleteProject(id);
+    };
 
-                const projectId = docRef.id;
-                console.log("Projekt oprettet med ID:", projectId);
-
-                // Nulstil formularværdier
-                setProjectName("");
-                setProjectDescription("");
-                setProjectDeadline(""); // Nulstil deadline
-                setProjectPriority(""); // Nulstil prioritet
-                setShowAdminModal(false); // Luk modalen efter oprettelsen
-            } catch (error) {
-                handleError("Kunne ikke oprette projekt.");
-                console.error("Fejl ved oprettelse af projekt:", error);
-            }
-        } else {
-            Alert.alert("Fejl", "Alle felter skal udfyldes.");
-        }
+    const navigateToDetails = (project) => {
+        router.push({
+            pathname: "/projectDetails",
+            params: { projectId: project.id, projectName: project.name },
+        });
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.header}>Projekter - {department}</Text>
-
-            {role === "admin" && (
-                <TouchableOpacity style={styles.adminIcon} onPress={() => setShowAdminModal(true)}>
-                    <Icon name="plus-circle" size={30} color="#173630" />
-                </TouchableOpacity>
-            )}
 
             {loading && (
                 <View style={styles.loadingContainer}>
@@ -85,117 +61,90 @@ export default function Projects() {
                 {projects.map((project) => (
                     <TouchableOpacity
                         key={project.id}
-                        onPress={() => viewProjectDetails(project)} // Gør hele elementet klikbart
+                        onPress={() => navigateToDetails(project)}
                         style={styles.projectItemContainer}
                     >
                         <View style={styles.projectItem}>
-                            <Text style={styles.projectText}>
-                                {project.name.length > 30 ? `${project.name.substring(0, 30)}...` : project.name}
-                                {project.description && project.description.length > 0 && (
-                                    <Text style={styles.projectDescription}>
-                                        {" "}-{" "}
-                                        {project.description.length > 30
-                                            ? `${project.description.substring(0, 30)}...`
-                                            : project.description}
-                                    </Text>
-                                )}
-                            </Text>
+                            <Text style={styles.projectText}>{project.name}</Text>
+                            <Text style={styles.projectDescription}>{project.description}</Text>
                         </View>
-
                         {role === "admin" && (
-                            <>
-                                <TouchableOpacity
-                                    onPress={() => deleteProject(project.id)}
-                                    style={styles.deleteButton}
-                                >
-                                    <Icon name="trash" size={24} color="#000" />
-                                </TouchableOpacity>
-                            </>
+                            <TouchableOpacity onPress={() => handleDeleteProject(project.id)} style={styles.deleteButton}>
+                                <Icon name="trash" size={24} color="#000" />
+                            </TouchableOpacity>
                         )}
                     </TouchableOpacity>
                 ))}
             </ScrollView>
 
             {role === "admin" && (
-                <Modal visible={showAdminModal} animationType="slide" transparent>
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalContent}>
+                <TouchableOpacity style={styles.addIcon} onPress={() => setShowCreationModal(true)}>
+                    <Icon name="plus-circle" size={50} color="#173630" />
+                </TouchableOpacity>
+            )}
+
+            <Modal visible={showCreationModal} animationType="slide" transparent>
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <ScrollView>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Projekt Navn"
+                                placeholderTextColor="#999"
                                 value={projectName}
                                 onChangeText={setProjectName}
                             />
                             <TextInput
                                 style={styles.input}
                                 placeholder="Projekt Beskrivelse"
+                                placeholderTextColor="#999"
                                 value={projectDescription}
                                 onChangeText={setProjectDescription}
                             />
                             <TextInput
                                 style={styles.input}
                                 placeholder="Projekt Deadline"
+                                placeholderTextColor="#999"
                                 value={projectDeadline}
-                                onChangeText={setProjectDeadline} // Bind deadline state
+                                onChangeText={setProjectDeadline}
                             />
-
                             <TextInput
                                 style={styles.input}
                                 placeholder="Prioritet (Lav, Medium, Høj)"
+                                placeholderTextColor="#999"
                                 value={projectPriority}
                                 onChangeText={setProjectPriority}
                             />
-
-                            <TouchableOpacity
-                                style={styles.addButton}
-                                onPress={editingProject ? updateProject : createProject}
-                            >
-                                <Text style={styles.addButtonText}>{editingProject ? "Opdater" : "Opret"}</Text>
+                            <TouchableOpacity style={styles.addButton} onPress={handleCreateProject}>
+                                <Text style={styles.addButtonText}>Opret</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.cancelButton}
-                                onPress={() => {
-                                    setShowAdminModal(false);
-                                    setEditingProject(null);
-                                    setProjectName("");
-                                    setProjectDescription("");
-                                    setProjectDeadline(""); // Nulstil deadline når der afbrydes
-                                }}
+                                onPress={() => setShowCreationModal(false)}
                             >
                                 <Text style={styles.cancelButtonText}>Annuller</Text>
                             </TouchableOpacity>
-                        </View>
+                        </ScrollView>
                     </View>
-                </Modal>
-            )}
-            <View style={styles.bottomBox}>
-                <Text style={styles.boxText}>
-                    Copyright © 2024 Novozymes A/S, en del af Novonesis Group
-                </Text>
-            </View>
+                </View>
+            </Modal>
         </View>
     );
 }
-
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f8f9fa",
         paddingHorizontal: 20,
-        paddingTop: 80,
+        paddingTop: Platform.OS === "ios" ? 70 : 80,
     },
     header: {
-        fontSize: 24,
+        fontSize: Platform.OS === "ios" ? 28 : 26,
         fontWeight: "bold",
         marginBottom: 20,
         textAlign: "center",
-        color: "#333",
-    },
-    adminIcon: {
-        alignSelf: "flex-end",
-        marginRight: 20,
-        marginBottom: 10,
+        color: "#173630",
     },
     loadingContainer: {
         flex: 1,
@@ -203,22 +152,24 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     errorText: {
-        color: "red",
+        color: "#d9534f",
         textAlign: "center",
         marginBottom: 20,
+        fontSize: 16,
     },
     list: {
         flex: 1,
+        marginTop: Platform.OS === "web" ? 10 : 15,
     },
     projectItemContainer: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 10,
-        padding: 10,
+        padding: 15,
         borderWidth: 1,
         borderColor: "#ccc",
-        borderRadius: 5,
+        borderRadius: 8,
         backgroundColor: "#fff",
     },
     projectItem: {
@@ -226,76 +177,80 @@ const styles = StyleSheet.create({
     },
     projectText: {
         fontSize: 16,
+        fontWeight: "500",
         color: "#173630",
     },
     projectDescription: {
         fontSize: 12,
         color: "#999",
     },
-    editButton: {
-        marginRight: 10,
-    },
     deleteButton: {
         marginLeft: 10,
+    },
+    addIcon: {
+        position: "absolute",
+        bottom: 30,
+        right: 30,
+        shadowColor: Platform.OS === "ios" ? "#000" : "transparent",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: Platform.OS === "ios" ? 0.3 : 0.1,
+        shadowRadius: 4,
+        elevation: Platform.OS === "web" ? 3 : 6,
     },
     modalContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backgroundColor: Platform.OS === "ios" ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.5)",
     },
     modalContent: {
-        width: "80%",
+        width: Platform.OS === "ios" ? "85%" : "90%",
         padding: 20,
         backgroundColor: "#fff",
-        borderRadius: 10,
+        borderRadius: 12,
         alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 6,
     },
     input: {
         width: "100%",
-        padding: 12,
+        padding: 14,
         borderWidth: 1,
-        borderRadius: 5,
-        marginBottom: 10,
-        backgroundColor: "#ededed",
-        color: "#000",
+        borderRadius: 10,
+        marginBottom: 12,
+        backgroundColor: "#f5f5f5",
+        color: "#333",
+        fontSize: 16,
+        borderColor: "#ccc",
     },
     addButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 25,
         backgroundColor: "#173630",
-        borderRadius: 5,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 20,
     },
     addButtonText: {
         color: "#fff",
-        fontSize: 16,
+        fontSize: Platform.OS === "ios" ? 16 : 15,
         fontWeight: "bold",
     },
     cancelButton: {
-        marginTop: 10,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
+        marginTop: 15,
+        paddingVertical: 12,
+        paddingHorizontal: 25,
         backgroundColor: "#d9534f",
-        borderRadius: 5,
+        borderRadius: 8,
+        alignItems: "center",
     },
     cancelButtonText: {
         color: "#fff",
-        fontSize: 16,
+        fontSize: Platform.OS === "ios" ? 16 : 15,
         fontWeight: "bold",
     },
-    bottomBox: {
-        width: "100%",
-        height: 60,
-        backgroundColor: "#173630",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "absolute",
-        bottom: 0,
-    },
-    boxText: {
-        color: "#fff",
-        fontSize: 14,
-        lineHeight: 16,
-        textAlign: "center",
-    },
 });
+
