@@ -3,7 +3,7 @@ import {ActionSheetIOS, ActivityIndicator, Platform, StyleSheet, Text, Touchable
 import {useGlobalSearchParams, useRouter} from "expo-router";
 import {fetchDepartmentsForUser} from "./services/dataService";
 import {Picker} from "@react-native-picker/picker";
-import {showAlert} from "./config/utill";
+import {showAlert} from "./components/utill";
 
 export default function Department() {
     const [selectedDepartment, setSelectedDepartment] = useState("");
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     },
     bottomBox: {
         width: Platform.OS === "web" ? "100%" : "120%",
-        height: 50,
+        height: 60,
         backgroundColor: "#173630",
         justifyContent: "center",
         alignItems: "center",
