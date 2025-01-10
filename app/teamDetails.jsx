@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Platform } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
-import { doc, updateDoc } from "firebase/firestore";
 import { fetchDepartments } from "./services/dataService";
-import { database } from "./config/firebase";
+import { updateUserDetails } from "./services/teamService";
+import { showAlert } from "./config/utill";
 
 export default function TeamDetails() {
     const { id, email, role, firstName, lastName, departments } = useGlobalSearchParams();
@@ -17,43 +17,35 @@ export default function TeamDetails() {
     const { departments: availableDepartments, error: departmentError } = fetchDepartments();
 
     if (departmentError) {
-        console.error("Error fetching departments:", departmentError);
+        showAlert("Fejl", "Kunne ikke hente afdelinger.");
     }
 
-    const saveUserDetails = async (field, value) => {
-        try {
-            const userRef = doc(database, "users", id);
-            const updatedValue = field === "departments" ? value : { [field]: value };
-            await updateDoc(userRef, field === "departments" ? { departments: value } : updatedValue);
-            Alert.alert("Success", `${field} updated successfully.`);
-        } catch (error) {
-            Alert.alert("Error", `Failed to update ${field}.`);
-            console.error(`Error updating ${field}:`, error);
-        }
-    };
-
-
-    const toggleEdit = (field) => {
+    const toggleEdit = async (field) => {
         if (editingField === field) {
+            let value;
+
             switch (field) {
                 case "email":
-                    saveUserDetails("email", userEmail);
+                    value = userEmail;
                     break;
                 case "firstName":
-                    saveUserDetails("firstName", userFirstName);
+                    value = userFirstName;
                     break;
                 case "lastName":
-                    saveUserDetails("lastName", userLastName);
+                    value = userLastName;
                     break;
                 case "departments":
-                    saveUserDetails("departments", userDepartments.join(", "));
+                    value = userDepartments;
                     break;
                 case "role":
-                    saveUserDetails("role", userRole);
+                    value = userRole;
                     break;
                 default:
-                    break;
+                    console.error("Ugyldig felt:", field);
+                    return;
             }
+
+            await updateUserDetails(id, field, value);
             setEditingField("");
         } else {
             setEditingField(field);
@@ -62,11 +54,10 @@ export default function TeamDetails() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>User Details</Text>
+            <Text style={styles.header}>Bruger Detaljer</Text>
 
-            {/* First Name */}
             <View style={styles.detailContainer}>
-                <Text style={styles.label}>First Name:</Text>
+                <Text style={styles.label}>Fornavn:</Text>
                 {editingField === "firstName" ? (
                     <TextInput
                         style={styles.input}
@@ -74,6 +65,8 @@ export default function TeamDetails() {
                         onChangeText={setUserFirstName}
                         onBlur={() => toggleEdit("firstName")}
                         autoFocus
+                        placeholder="Indtast fornavn"
+                        placeholderTextColor="#999"
                     />
                 ) : (
                     <TouchableOpacity onPress={() => toggleEdit("firstName")}>
@@ -82,9 +75,8 @@ export default function TeamDetails() {
                 )}
             </View>
 
-            {/* Last Name */}
             <View style={styles.detailContainer}>
-                <Text style={styles.label}>Last Name:</Text>
+                <Text style={styles.label}>Efternavn:</Text>
                 {editingField === "lastName" ? (
                     <TextInput
                         style={styles.input}
@@ -92,6 +84,8 @@ export default function TeamDetails() {
                         onChangeText={setUserLastName}
                         onBlur={() => toggleEdit("lastName")}
                         autoFocus
+                        placeholder="Indtast efternavn"
+                        placeholderTextColor="#999"
                     />
                 ) : (
                     <TouchableOpacity onPress={() => toggleEdit("lastName")}>
@@ -100,7 +94,6 @@ export default function TeamDetails() {
                 )}
             </View>
 
-            {/* Email */}
             <View style={styles.detailContainer}>
                 <Text style={styles.label}>Email:</Text>
                 {editingField === "email" ? (
@@ -110,6 +103,9 @@ export default function TeamDetails() {
                         onChangeText={setUserEmail}
                         onBlur={() => toggleEdit("email")}
                         autoFocus
+                        placeholder="Indtast email"
+                        placeholderTextColor="#999"
+                        keyboardType="email-address"
                     />
                 ) : (
                     <TouchableOpacity onPress={() => toggleEdit("email")}>
@@ -118,25 +114,20 @@ export default function TeamDetails() {
                 )}
             </View>
 
-            {/* Departments */}
             <View style={styles.detailContainer}>
-                <Text style={styles.label}>Departments:</Text>
+                <Text style={styles.label}>Afdelinger:</Text>
                 <ScrollView contentContainerStyle={styles.multiSelectContainer}>
                     {availableDepartments.map((dep) => (
                         <TouchableOpacity
                             key={dep.id}
-                            style={
-                                userDepartments.includes(dep.name)
-                                    ? styles.selectedDepartment
-                                    : styles.unselectedDepartment
-                            }
+                            style={userDepartments.includes(dep.name) ? styles.selectedDepartment : styles.unselectedDepartment}
                             onPress={() => {
                                 const updatedDepartments = userDepartments.includes(dep.name)
                                     ? userDepartments.filter((d) => d !== dep.name)
                                     : [...userDepartments, dep.name];
 
                                 setUserDepartments(updatedDepartments);
-                                saveUserDetails("departments", updatedDepartments);
+                                updateUserDetails(id, "departments", updatedDepartments);
                             }}
                         >
                             <Text style={styles.departmentText}>{dep.name}</Text>
@@ -145,34 +136,26 @@ export default function TeamDetails() {
                 </ScrollView>
             </View>
 
-
-            {/* Role */}
             <View style={styles.detailContainer}>
-                <Text style={styles.label}>Role:</Text>
+                <Text style={styles.label}>Rolle:</Text>
                 <View style={styles.roleOptions}>
                     <TouchableOpacity
-                        style={[
-                            styles.roleOption,
-                            userRole === "admin" && styles.selectedRole,
-                        ]}
+                        style={[styles.roleOption, userRole === "admin" && styles.selectedRole]}
                         onPress={() => {
                             setUserRole("admin");
-                            saveUserDetails("role", "admin");
+                            updateUserDetails(id, "role", "admin");
                         }}
                     >
-                        <Text style={styles.roleText}>Admin</Text>
+                        <Text style={[styles.roleText, userRole === "admin" && styles.selectedRoleText]}>Administrator</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[
-                            styles.roleOption,
-                            userRole === "member" && styles.selectedRole,
-                        ]}
+                        style={[styles.roleOption, userRole === "member" && styles.selectedRole]}
                         onPress={() => {
                             setUserRole("member");
-                            saveUserDetails("role", "member");
+                            updateUserDetails(id, "role", "member");
                         }}
                     >
-                        <Text style={styles.roleText}>Member</Text>
+                        <Text style={[styles.roleText, userRole === "member" && styles.selectedRoleText]}>Bruger</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -181,18 +164,83 @@ export default function TeamDetails() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f8f9fa", padding: 20 },
-    header: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-    detailContainer: { marginBottom: 20 },
-    label: { fontSize: 16, fontWeight: "bold", marginBottom: 5, color: "#333" },
-    text: { fontSize: 16, color: "#555", padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#fff" },
-    input: { fontSize: 16, padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#fff" },
-    multiSelectContainer: { flexDirection: "row", flexWrap: "wrap" },
-    selectedDepartment: { backgroundColor: "#173630", padding: 8, borderRadius: 5, margin: 5 },
-    unselectedDepartment: { backgroundColor: "#ccc", padding: 8, borderRadius: 5, margin: 5 },
-    departmentText: { color: "#fff" },
-    roleOptions: { flexDirection: "row", justifyContent: "space-around" },
-    roleOption: { padding: 10, borderWidth: 1, borderRadius: 5, borderColor: "#ccc", marginHorizontal: 5 },
-    selectedRole: { backgroundColor: "#173630", borderColor: "#173630" },
-    roleText: { color: "#fff", fontSize: 16 },
+    container: {
+        flex: 1,
+        backgroundColor: "#f8f9fa",
+        padding: 20,
+    },
+    header: {
+        fontSize: Platform.OS === "ios" ? 28 : 26,
+        fontWeight: "bold",
+        marginBottom: 20,
+        textAlign: "center",
+        color: "#173630",
+    },
+    detailContainer: {
+        marginBottom: 20,
+    },
+    label: {
+        fontSize: 16,
+        fontWeight: "bold",
+        marginBottom: 5,
+        color: "#333",
+    },
+    text: {
+        fontSize: 16,
+        color: "#555",
+        padding: 10,
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 5,
+        backgroundColor: "#fff",
+    },
+    input: {
+        fontSize: 16,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 5,
+        backgroundColor: "#fff",
+    },
+    multiSelectContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+    },
+    selectedDepartment: {
+        backgroundColor: "#173630",
+        padding: 8,
+        borderRadius: 5,
+        margin: 5,
+    },
+    unselectedDepartment: {
+        backgroundColor: "#ccc",
+        padding: 8,
+        borderRadius: 5,
+        margin: 5,
+    },
+    departmentText: {
+        color: "#fff",
+    },
+    roleOptions: {
+        flexDirection: "row",
+        justifyContent: "space-evenly",
+    },
+    roleOption: {
+        padding: 10,
+        borderWidth: 1,
+        borderRadius: 5,
+        borderColor: "#ccc",
+        marginHorizontal: 5,
+    },
+    selectedRole: {
+        backgroundColor: "#173630",
+        borderColor: "#173630",
+    },
+    roleText: {
+        color: "#555",
+        fontSize: 16,
+    },
+    selectedRoleText: {
+        color: "#fff",
+    },
 });

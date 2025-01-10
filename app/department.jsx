@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     },
     bottomBox: {
         width: Platform.OS === "web" ? "100%" : "120%",
-        height: 50,
+        height: 60,
         backgroundColor: "#173630",
         justifyContent: "center",
         alignItems: "center",
