@@ -1,6 +1,6 @@
-import {collection, query, where, getDocs, doc} from "firebase/firestore";
-import {useCollection} from "react-firebase-hooks/firestore";
-import {database} from "../config/firebase";
+import { collection } from "firebase/firestore";
+import { useCollection } from "react-firebase-hooks/firestore";
+import { database } from "../config/firebase";
 
 // Fetch projects for a specific department
 export const fetchProjects = (department) => {
@@ -31,26 +31,11 @@ export const fetchDepartments = () => {
 };
 
 // Fetch tasks for a specific project by projectId
-export const fetchTasksForProject = async (projectId) => {
-  try {
-    // Get a reference to the project document using the projectId
-    const projectRef = doc(database, "projects", projectId);
+export const fetchTasks = (projectId) => {
+  const [values, loading, error] = useCollection(collection(database, `projects/${projectId}/tasks`));
+  const tasks = values?.docs.map((doc) => ({ id: doc.id, ...doc.data() })) || [];
 
-    // Reference to the "tasks" subcollection within the project document
-    const tasksRef = collection(projectRef, "tasks");
-
-    // Fetch the tasks from the tasks subcollection
-    const querySnapshot = await getDocs(tasksRef);
-
-    // Map the task documents to an array of task data
-    const tasks = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() // Include task data (e.g., title, description)
-    }));
-
-    return { tasks, success: true };
-  } catch (error) {
-    console.error("Error fetching tasks:", error);
-    return { success: false, error: error.message, tasks: [] };
-  }
+  return { tasks, loading, error };
 };
+
+
