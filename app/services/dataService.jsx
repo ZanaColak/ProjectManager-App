@@ -30,6 +30,15 @@ export const fetchDepartments = () => {
   return { departments, loading, error };
 };
 
+// Fetch departments for a specific user by UID
+export const fetchDepartmentsForUser = (uid) => {
+  const [users, loading, error] = useCollection(collection(database, "users"));
+  const departments = users?.docs.filter((doc) => doc.id === uid)
+      .flatMap((user) => user.data().departments || []) || [];
+
+  return { departments, loading, error };
+};
+
 // Fetch tasks for a specific project by projectId
 export const fetchTasks = (projectId) => {
   const [values, loading, error] = useCollection(collection(database, `projects/${projectId}/tasks`));
