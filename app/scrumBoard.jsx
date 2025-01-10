@@ -49,6 +49,7 @@ export default function ScrumBoard() {
         if (errorProjects) setErrorMessage("Error fetching projects.");
     }, [projectSnapshot]);
 
+
     useEffect(() => {
         if (taskSnapshot && selectedProject) {
             const taskList = taskSnapshot.docs.map((doc) => ({
@@ -63,6 +64,7 @@ export default function ScrumBoard() {
         }
         if (errorTasks) setErrorMessage("Error fetching tasks.");
     }, [taskSnapshot, selectedProject]);
+
 
     const addTask = async () => {
         if (!selectedProject || !newTaskTitle.trim() || !newTaskDescription.trim()) {
@@ -129,6 +131,7 @@ export default function ScrumBoard() {
             name: newTaskTitle,
             description: newTaskDescription,
             priority: priority,
+            column: taskToUpdate.column,
 
         });
 
@@ -220,6 +223,8 @@ export default function ScrumBoard() {
                         <Picker.Item label="Medium" value="Medium" />
                         <Picker.Item label="High" value="High" />
                     </Picker>
+
+
                     <TextInput
                         placeholder="Time Spent (e.g., '1 hour', '30 minutes')"
                         value={timeSpent}
@@ -265,6 +270,18 @@ export default function ScrumBoard() {
                         <Picker.Item label="High" value="High" style={{ color: 'red' }} />
                     </Picker>
 
+                    {/* Picker for selecting the column */}
+                    <Picker
+                        selectedValue={taskToUpdate ? taskToUpdate.column : "todo"}
+                        onValueChange={(newColumn) => setTaskToUpdate({ ...taskToUpdate, column: newColumn })}
+                        style={[styles.picker]}
+                    >
+                        <Picker.Item label="Backlog" value="todo" />
+                        <Picker.Item label="In Progress" value="inprogress" />
+                        <Picker.Item label="Review" value="review" />
+                        <Picker.Item label="Done" value="done" />
+                        <Picker.Item label="Blocked" value="blocked" />
+                    </Picker>
 
                     <TextInput
                         placeholder="Time Spent (e.g., '1 hour', '30 minutes')"
@@ -315,6 +332,11 @@ export default function ScrumBoard() {
                     </TouchableOpacity>
                 </View>
             </Modal>
+            <View style={styles.bottomBox}>
+                <Text style={styles.boxText}>
+                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
+                </Text>
+            </View>
         </View>
     );
 }
@@ -415,5 +437,20 @@ const styles = StyleSheet.create({
     },
     deleteButtonText: {
         color: "#fff",
+    },
+    bottomBox: {
+        width: "100%",
+        height: 60,
+        backgroundColor: "#173630",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "absolute",
+        bottom: 0,
+    },
+    boxText: {
+        color: "#fff",
+        fontSize: 14,
+        lineHeight: 16,
+        textAlign: "center",
     },
 });
