@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal } from "react-native";
-import { collection } from "firebase/firestore";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal } from "react-native";
+import { collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { database } from "./config/firebase";
 import { createTask } from "./task";
 import { useGlobalSearchParams } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
+
 
 export default function ScrumBoard() {
     const { department } = useGlobalSearchParams();
@@ -23,6 +24,8 @@ export default function ScrumBoard() {
     const [priority, setPriority] = useState("Medium");
     const [modalVisible, setModalVisible] = useState(false);
     const [projectModalVisible, setProjectModalVisible] = useState(false);
+    const [updateTaskModalVisible, setUpdateTaskModalVisible] = useState(false); // for update modal
+    const [taskToUpdate, setTaskToUpdate] = useState(null); // holds task to update
     const [errorMessage, setErrorMessage] = useState("");
 
     const projectQuery = collection(database, "projects");
@@ -100,23 +103,71 @@ export default function ScrumBoard() {
         setProjectModalVisible(false);
     };
 
+    const handleUpdateTask = async () => {
+        if (!taskToUpdate || !newTaskTitle.trim() || !newTaskDescription.trim()) {
+            setErrorMessage("Please fill in all required fields.");
+            return;
+        }
+
+        const taskRef = doc(database, `projects/${selectedProject.id}/tasks`, taskToUpdate.id);
+        await updateDoc(taskRef, {
+            name: newTaskTitle,
+            description: newTaskDescription,
+            priority: priority,
+        });
+
+        // Clear and close modal
+        setUpdateTaskModalVisible(false);
+        setNewTaskTitle("");
+        setNewTaskDescription("");
+        setTaskToUpdate(null);
+    };
+
+    const openUpdateModal = (task) => {
+        setTaskToUpdate(task);
+        setNewTaskTitle(task.name);
+        setNewTaskDescription(task.description);
+        setPriority(task.priority);
+        setUpdateTaskModalVisible(true);
+    };
+
+    const handleDeleteTask = async () => {
+        if (!taskToUpdate) return;
+
+        try {
+            const taskRef = doc(database, `projects/${selectedProject.id}/tasks`, taskToUpdate.id);
+            await deleteDoc(taskRef); // Delete task from Firestore
+
+            // Close modal and reset task to update
+            setUpdateTaskModalVisible(false);
+            setTaskToUpdate(null);
+        } catch (error) {
+            setErrorMessage("Error deleting task.");
+        }
+    };
+
+
     return (
         <View style={styles.container}>
             <Text style={styles.header}>
                 Scrumboard - {selectedProject ? selectedProject.name : "Select a project"}
             </Text>
+
             <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
                 <Text style={styles.buttonText}>Create New Task</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.button} onPress={addColumn}>
                 <Text style={styles.buttonText}>Add Column</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
                 style={styles.button}
                 onPress={() => setProjectModalVisible(true)}
             >
                 <Text style={styles.buttonText}>Select Project</Text>
             </TouchableOpacity>
+
             <View style={styles.board}>
                 {columns.map((column) => (
                     <View key={column.id} style={styles.column}>
@@ -124,15 +175,20 @@ export default function ScrumBoard() {
                         <FlatList
                             data={column.tasks}
                             renderItem={({ item }) => (
-                                <View style={styles.taskCard}>
+                                <TouchableOpacity
+                                    style={styles.taskCard}
+                                    onPress={() => openUpdateModal(item)} // Open update modal when clicking on task card
+                                >
                                     <Text style={styles.taskName}>{item.name}</Text>
-                                </View>
+                                </TouchableOpacity>
                             )}
                             keyExtractor={(item) => item.id}
                         />
                     </View>
                 ))}
             </View>
+
+            {/* Create Task Modal */}
             <Modal visible={modalVisible} animationType="slide">
                 <View style={styles.modalContent}>
                     <TextInput
@@ -147,32 +203,87 @@ export default function ScrumBoard() {
                         onChangeText={setNewTaskDescription}
                         style={styles.input}
                     />
-                    <Picker selectedValue={priority} onValueChange={setPriority}>
+                    <Picker selectedValue={priority} onValueChange={setPriority} style={styles.picker}>
                         <Picker.Item label="Low" value="Low" />
                         <Picker.Item label="Medium" value="Medium" />
                         <Picker.Item label="High" value="High" />
                     </Picker>
+
+                    {/* Create Task Button */}
                     <TouchableOpacity style={styles.button} onPress={addTask}>
                         <Text style={styles.buttonText}>Create Task</Text>
                     </TouchableOpacity>
+
+                    {/* Cancel Button */}
+                    <TouchableOpacity
+                        style={[styles.button, styles.cancelButton]}
+                        onPress={() => setModalVisible(false)} // Close modal when Cancel is pressed
+                    >
+                        <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                    </TouchableOpacity>
                 </View>
             </Modal>
+
+            {/* Update Task Modal */}
+            <Modal visible={updateTaskModalVisible} animationType="slide">
+                <View style={styles.modalContent}>
+                    <TextInput
+                        placeholder="Task Title"
+                        value={newTaskTitle}
+                        onChangeText={setNewTaskTitle}
+                        style={styles.input}
+                    />
+                    <TextInput
+                        placeholder="Task Description"
+                        value={newTaskDescription}
+                        onChangeText={setNewTaskDescription}
+                        style={styles.input}
+                    />
+                    <Picker selectedValue={priority} onValueChange={setPriority} style={styles.picker}>
+                        <Picker.Item label="Low" value="Low" />
+                        <Picker.Item label="Medium" value="Medium" />
+                        <Picker.Item label="High" value="High" />
+                    </Picker>
+
+                    <TouchableOpacity style={styles.button} onPress={handleUpdateTask}>
+                        <Text style={styles.buttonText}>Update Task</Text>
+                    </TouchableOpacity>
+
+                    {/* Delete Button */}
+                    <TouchableOpacity
+                        style={[styles.button, styles.deleteButton]}
+                        onPress={handleDeleteTask} // Handle task deletion
+                    >
+                        <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete Task</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.button, styles.cancelButton]}
+                        onPress={() => setUpdateTaskModalVisible(false)} // Close modal when Cancel is pressed
+                    >
+                        <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
             <Modal visible={projectModalVisible} animationType="slide">
-                <FlatList
-                    data={projects}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity onPress={() => handleProjectSelect(item)}>
-                            <Text>{item.name}</Text>
-                        </TouchableOpacity>
-                    )}
-                    keyExtractor={(item) => item.id}
-                />
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={() => setProjectModalVisible(false)}
-                >
-                    <Text style={styles.buttonText}>Close</Text>
-                </TouchableOpacity>
+                <View style={styles.modalContent}>
+                    <FlatList
+                        data={projects}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity onPress={() => handleProjectSelect(item)} style={styles.projectItem}>
+                                <Text style={styles.projectText}>{item.name}</Text>
+                            </TouchableOpacity>
+                        )}
+                        keyExtractor={(item) => item.id}
+                    />
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => setProjectModalVisible(false)}
+                    >
+                        <Text style={styles.buttonText}>Close</Text>
+                    </TouchableOpacity>
+                </View>
             </Modal>
         </View>
     );
@@ -204,17 +315,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 14,
     },
-    deleteButton: {
-        backgroundColor: "red",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        marginLeft: 10,
-    },
-    deleteButtonText: {
-        color: "#fff",
-        fontSize: 12,
-    },
     errorText: {
         color: "red",
         fontSize: 12,
@@ -234,11 +334,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginBottom: 8,
     },
-    columnTitle: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: "#000",
-    },
     taskCard: {
         padding: 8,
         borderRadius: 4,
@@ -253,11 +348,6 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 15,
     },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 8,
-    },
     input: {
         borderWidth: 1,
         borderColor: "#ddd",
@@ -266,19 +356,19 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         width: "100%",
     },
-    bottomBox: {
-        width: "100%",
-        height: 60,
-        backgroundColor: "#173630",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "absolute",
-        bottom: 0,
+    cancelButton: {
+        backgroundColor: "red",
     },
-    boxText: {
-        color: "#fff",
-        fontSize: 14,
-        lineHeight: 16,
+    cancelButtonText: {
+        color: "white",
+    },
+    deleteButton: {
+        backgroundColor: "red",
+        marginTop: 10, // Optional, to add space between buttons
+    },
+    deleteButtonText: {
+        color: "white",
         textAlign: "center",
     },
+
 });
