@@ -46,8 +46,8 @@ export default function RootLayout() {
             {/* Timeline Screen */}
             <Stack.Screen name="timeline" options={{ title: "Tidslinje"}}/>
 
-            {/* Error Screen */}
-            <Stack.Screen name="error" options={{headerShown: false}}/>
+            {/* Team Screen */}
+            <Stack.Screen name="team" options={{ title: "Hold"}}/>
 
         </Stack>
     );
