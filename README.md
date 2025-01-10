@@ -1,50 +1,83 @@
-# Welcome to your Expo app 👋
+# Project Manager Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+This Project Manager App is designed to streamline project management by providing an intuitive interface for managing projects, tasks, teams, and timelines. It enables users to organize workflows effectively and track project progress effortlessly.
 
-## Get started
+**Live Application**: [https://project-manager-x4m5.onrender.com](https://project-manager-x4m5.onrender.com)  
+_Note: The live version is currently not working. Follow the **CONTRIBUTE** section for a working local version._
 
-1. Install dependencies
+## Features
+### Core Functionalities
+- **Project Management**: Create, edit, and delete projects with detailed descriptions, start dates, and deadlines.
+- **Task Management**: Manage tasks and subtasks within projects, assign employees, and track progress.
+- **Team Management**: View team members, add new users, assign roles, and manage employee details.
+- **Timeline View**: Visualize project and task durations on an interactive timeline.
 
+### Roles
+- **Admin**: Full control over creating, editing, and deleting projects, tasks, and teams.
+- **Member**: Limited access to view and update tasks assigned to them.
+
+## Key Endpoints
+The app includes multiple endpoints to access its features:
+- `/login` - Login page for user authentication.
+- `/signup` - Sign up new users.
+- `/dashboard` - Main dashboard displaying projects and options for navigation.
+- `/create_project` - Page to create new projects.
+
+## Pages Overview
+### **Homepage**
+- Users are greeted with a login page where they can either log in or sign up.
+- **Login** requires email and password.
+- **Signup** requires first name, last name, email, and password.
+
+### **Dashboard**
+After login, users are directed to the dashboard with the following options:
+1. **Projects**: Access all projects and perform CRUD operations (Admins only).
+2. **Calendar**: View events and timelines for ongoing projects.
+3. **Team**: Manage team members and roles.
+4. **Scrum Board**: Organize tasks in a Kanban-style board.
+
+### **Projects**
+- Users can create new projects with title, description, start date, and deadline.
+- Projects are displayed in a list with options for editing or deleting (Admins only).
+
+### **Tasks**
+- Add, edit, and delete tasks within specific projects.
+- Subtasks allow users to break tasks into manageable units, assign employees, and mark them as completed.
+
+### **Teams**
+- Add and manage team members.
+- Assign roles (Admin or Member) and associate users with departments.
+
+### **Timeline**
+- Interactive timeline to visualize project and task progress.
+- Filters for projects, tasks, and team members.
+
+## Table Views
+### **Projects**
+| Project Title | Start Date | Deadline | Final Date | Estimated Time | Actual Time | Time Evaluation |
+|---------------|------------|----------|------------|----------------|-------------|-----------------|
+
+### **Tasks**
+| Task Title    | Description         |
+|---------------|---------------------|
+
+### **Subtasks**
+| Subtask Title | Description         | Estimated Time | Actual Time | Assigned Employees |
+|---------------|---------------------|----------------|-------------|--------------------|
+
+### **Team**
+| First Name  | Last Name  | Email          | Role  | Departments      |
+|-------------|------------|----------------|-------|------------------|
+
+## Installation & Setup
+### Prerequisites
+1. Node.js and npm installed on your local machine.
+2. Firebase project setup (database and authentication).
+3. React Native CLI installed for mobile development.
+
+### Steps to Run Locally
+1. Clone the repository:
    ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-    npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+   git clone https://github.com/ZanaColak/ProjectManager-App.git
+   cd ProjectManager-App
