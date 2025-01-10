@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from "react-native";
-import { router, useGlobalSearchParams, useRouter} from "expo-router";
+import { router, useGlobalSearchParams } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { fetchUsers } from "./services/dataService";
+import { fetchUsers, fetchDepartments } from "./services/dataService";
+import { updateProject } from "./services/dataService";
 import { database } from "./config/firebase";
-
+import { Picker } from "@react-native-picker/picker";
+import { showAlert } from './config/utill';
 
 export default function ProjectDetails() {
     const { projectId } = useGlobalSearchParams();
@@ -13,7 +15,11 @@ export default function ProjectDetails() {
     const [error, setError] = useState(null);
     const { users: allUsers, loading: usersLoading, error: usersError } = fetchUsers();
     const [projects, setProjects] = useState([]);
-    const [editingField, setEditingField] = useState("");
+    const [availableDepartments, setAvailableDepartments] = useState([]);
+    const { departments, error: departmentError } = fetchDepartments();
+    const [selectedTeamMembers, setSelectedTeamMembers] = useState([]);
+    const [isEditingTitle, setIsEditingTitle] = useState(false); // New state to manage title edit mode
+    const [newProjectTitle, setNewProjectTitle] = useState(""); // Store the new title input
 
     useEffect(() => {
         const fetchProjectDetails = async () => {
@@ -22,12 +28,18 @@ export default function ProjectDetails() {
                 const projectDoc = await getDoc(projectRef);
                 if (projectDoc.exists()) {
                     setProject({ id: projectDoc.id, ...projectDoc.data() });
+                    setNewProjectTitle(projectDoc.data().name); // Initialize newProjectTitle with the current title
+                    if (projectDoc.data().teamMembers) {
+                        setSelectedTeamMembers(projectDoc.data().teamMembers);
+                    }
                 } else {
-                    setError("Project not found.");
+                    setError("Projektet blev ikke fundet.");
+                    showAlert("Fejl", "Projektet blev ikke fundet.");
                 }
             } catch (error) {
-                setError("Failed to load project details.");
-                console.error("Error fetching project details:", error);
+                setError("Fejl ved indlæsning af projektoplysninger.");
+                showAlert("Fejl", "Fejl ved indlæsning af projektoplysninger.");
+                console.error("Fejl ved hentning af projektoplysninger:", error);
             } finally {
                 setLoading(false);
             }
@@ -35,50 +47,73 @@ export default function ProjectDetails() {
         fetchProjectDetails();
     }, [projectId]);
 
-    const handleEdit = (field) => {
-        if (editingField === field) {
-            setEditingField("");
-            saveProjectDetails(field, project[field]);
-        } else {
-            setEditingField(field);
-        }
-    };
-
     const saveProjectDetails = async (field, value) => {
         try {
             const projectRef = doc(database, "projects", projectId);
             await updateDoc(projectRef, { [field]: value });
+            console.log(`${field} opdateret i Firebase`);
         } catch (error) {
-            console.error(`Error updating ${field}:`, error);
+            showAlert("Fejl", `Fejl ved opdatering af ${field}: ${error.message}`);
+            console.error(`Fejl ved opdatering af ${field}:`, error);
         }
+    };
+
+    const handleSaveTitle = () => {
+        if (newProjectTitle !== project.name) {
+            saveProjectDetails("name", newProjectTitle);
+            setProject((prev) => ({ ...prev, name: newProjectTitle }));
+        }
+        setIsEditingTitle(false); // Exit edit mode
+    };
+
+    const handleSelectMember = (user) => {
+        const updatedMembers = selectedTeamMembers.includes(user.id)
+            ? selectedTeamMembers.filter((id) => id !== user.id)
+            : [...selectedTeamMembers, user.id];
+
+        setSelectedTeamMembers(updatedMembers);
+        saveProjectDetails("teamMembers", updatedMembers);
     };
 
     if (loading || usersLoading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#173630" />
-                <Text>Loading Project Details...</Text>
+                <Text>Indlæser projektoplysninger...</Text>
             </View>
         );
     }
 
     if (error || usersError) {
-        return <Text style={styles.errorText}>{error || "Error loading users."}</Text>;
+        showAlert("Fejl", error || "Fejl ved indlæsning af brugere.");
+        return <Text style={styles.errorText}>{error || "Fejl ved indlæsning af brugere."}</Text>;
     }
 
-    // Filter the users based on the team members in the project
     const teamMembers = project.teamMembers
-        ? allUsers.filter(user => project.teamMembers.includes(user.id))
+        ? allUsers.filter((user) => selectedTeamMembers.includes(user.id))
         : [];
 
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.push("/projects")}>
-                    <Text style={styles.backButtonText}>Back to Projects</Text>
-                </TouchableOpacity>
+            <View style={styles.header}>
+                <View style={styles.projectTitleContainer}>
+                    {isEditingTitle ? (
+                        <TextInput
+                            style={styles.input}
+                            value={newProjectTitle}
+                            onChangeText={setNewProjectTitle}
+                            onBlur={handleSaveTitle} // Save title when focus is lost
+                            autoFocus
+                        />
+                    ) : (
+                        <TouchableOpacity onPress={() => setIsEditingTitle(true)}>
+                            <Text style={styles.projectTitle}>{project.name}</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
                 <TouchableOpacity
-                    style={styles.backButton}
+                    style={styles.headerButton}
                     onPress={() => {
                         router.push({
                             pathname: "/scrumBoard",
@@ -86,108 +121,80 @@ export default function ProjectDetails() {
                         });
                     }}
                 >
-                    <Text style={styles.backButtonText}>Go to Scrum board</Text>
+                    <Text style={styles.headerButtonText}>Gå til Scrum Board</Text>
                 </TouchableOpacity>
             </View>
 
-            <Text style={styles.header}>{project.name}</Text>
-            <View style={styles.detailContainer}>
-            <Text style={styles.label}>Description:</Text>
-                {editingField === "description" ? (
-                    <TextInput
-                        style={styles.input}
-                        value={project.description}
-                        onChangeText={(text) => setProject((prev) => ({ ...prev, description: text }))}
-                        onBlur={() => handleEdit("description")}
-                        autoFocus
-                        multiline
-                        numberOfLines={4}
-                    />
-                ) : (
-                    <TouchableOpacity onPress={() => handleEdit("description")}>
-                        <Text style={styles.text}>{project.description}</Text>
-                    </TouchableOpacity>
-                )}
-        </View>
-
-
-    <View style={styles.detailContainer}>
-                <Text style={styles.label}>Department:</Text>
-                {editingField === "department" ? (
-                    <TextInput
-                        style={styles.input}
-                        value={project.department}
-                        onChangeText={(text) => setProject((prev) => ({ ...prev, department: text }))}
-                        onBlur={() => handleEdit("department")}
-                        autoFocus
-                    />
-                ) : (
-                    <TouchableOpacity onPress={() => handleEdit("department")}>
-                        <Text style={styles.text}>{project.department}</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+            <Text style={styles.label}>Beskrivelse:</Text>
+            <TextInput
+                style={styles.input}
+                value={project.description}
+                onChangeText={(text) => {
+                    setProject((prev) => ({ ...prev, description: text }));
+                    saveProjectDetails("description", text); // Update description in Firebase immediately
+                }}
+                multiline
+                numberOfLines={4}
+            />
 
             <View style={styles.detailContainer}>
-                <Text style={styles.label}>Deadline:</Text>
-                <Text style={styles.text}>{new Date(project.deadline).toLocaleDateString()}</Text>
+                <Text style={styles.label}>Afdelinger:</Text>
+                <ScrollView contentContainerStyle={styles.multiSelectContainer}>
+                    {departments.map((dep) => (
+                        <TouchableOpacity
+                            key={dep.id}
+                            style={project.departments && project.departments.includes(dep.name) ? styles.selectedDepartment : styles.unselectedDepartment}
+                            onPress={() => {
+                                const updatedDepartments = project.departments && project.departments.includes(dep.name)
+                                    ? project.departments.filter((d) => d !== dep.name)
+                                    : [...(project.departments || []), dep.name];
+
+                                setProject((prev) => ({ ...prev, departments: updatedDepartments }));
+                                saveProjectDetails("departments", updatedDepartments);  // Update departments in Firebase
+                            }}
+                        >
+                            <Text style={styles.departmentText}>{dep.name}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
             </View>
 
-            <View style={styles.detailContainer}>
-                <Text style={styles.label}>Status:</Text>
-                {editingField === "status" ? (
-                    <TextInput
-                        style={styles.input}
-                        value={project.status}
-                        onChangeText={(text) => setProject((prev) => ({ ...prev, status: text }))}
-                        onBlur={() => handleEdit("status")}
-                        autoFocus
-                    />
-                ) : (
-                    <TouchableOpacity onPress={() => handleEdit("status")}>
-                        <Text style={styles.text}>{project.status}</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+            <Text style={styles.label}>Status:</Text>
+            <Picker
+                selectedValue={project.status}
+                style={styles.input}
+                onValueChange={(itemValue) => {
+                    setProject((prev) => ({ ...prev, status: itemValue }));
+                    saveProjectDetails("status", itemValue);  // Update status in Firebase immediately
+                }}
+            >
+                <Picker.Item label="Ikke startet" value="not started" />
+                <Picker.Item label="I gang" value="in progress" />
+                <Picker.Item label="Færdig" value="done" />
+            </Picker>
 
-            <View style={styles.detailContainer}>
-                <Text style={styles.label}>Priority:</Text>
-                {editingField === "priority" ? (
-                    <TextInput
-                        style={styles.input}
-                        value={project.priority}
-                        onChangeText={(text) => setProject((prev) => ({ ...prev, priority: text }))}
-                        onBlur={() => handleEdit("priority")}
-                        autoFocus
-                    />
-                ) : (
-                    <TouchableOpacity onPress={() => handleEdit("priority")}>
-                        <Text style={styles.text}>{project.priority}</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
-
-            <Text style={styles.label}>Team Members:</Text>
-            {teamMembers.length > 0 ? (
-                teamMembers.map((member) => (
-                    <View key={member.id} style={styles.teamMemberContainer}>
-                        <Text style={styles.text}>{`${member.firstName || "Unknown"} ${member.lastName || "Unknown"}`}</Text>
-                        <Text style={styles.text}>{member.email}</Text>
-                    </View>
-                ))
-            ) : (
-                <Text style={styles.text}>No team members assigned.</Text>
-            )}
+            <Text style={styles.label}>Prioritet:</Text>
+            <Picker
+                selectedValue={project.priority}
+                style={styles.input}
+                onValueChange={(itemValue) => {
+                    setProject((prev) => ({ ...prev, priority: itemValue }));
+                    saveProjectDetails("priority", itemValue);  // Update priority in Firebase immediately
+                }}
+            >
+                <Picker.Item label="Lav" value="low" />
+                <Picker.Item label="Middel" value="medium" />
+                <Picker.Item label="Høj" value="high" />
+            </Picker>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#f8f9fa", padding: 20 },
-    header: { fontSize: 24, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-    description: { fontSize: 16, color: "#555", marginBottom: 20 },
     label: { fontSize: 16, fontWeight: "bold", marginTop: 10, color: "#333" },
     text: { fontSize: 16, color: "#555", padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#fff", marginBottom: 10 },
+    input: { fontSize: 16, padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#fff" },
     loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
     errorText: { color: "red", textAlign: "center", marginTop: 20 },
     teamMemberContainer: { marginBottom: 10 },
@@ -205,6 +212,41 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 14
     },
-    input: { fontSize: 16, padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#fff" },
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 20,
+    },
+    projectTitleContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+        justifyContent: "center",
+    },
+    projectTitle: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: "#333",
+        flex: 1,
+        textAlign: "center",
+    },
+    headerButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        backgroundColor: "#173630",
+        borderRadius: 5,
+        position: "absolute",
+        right: 0,
+    },
+    headerButtonText: {
+        color: "#fff",
+        textAlign: "center",
+        fontSize: 14,
+    },
     detailContainer: { marginBottom: 20 },
+    multiSelectContainer: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
+    unselectedDepartment: { padding: 10, margin: 5, backgroundColor: "#f1f1f1", borderRadius: 5 },
+    selectedDepartment: { padding: 10, margin: 5, backgroundColor: "#a0e0c0", borderRadius: 5 },
+    departmentText: { fontSize: 14, color: "#333" }
 });

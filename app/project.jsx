@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
 import { useRouter, useGlobalSearchParams } from "expo-router";
 import { fetchProjects } from "./services/dataService";
+import { deleteProject } from "./services/projectService";
 import { addDoc, deleteDoc, updateDoc, doc, collection } from "firebase/firestore";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { database } from "./config/firebase";
@@ -10,7 +11,7 @@ export default function Projects() {
     const { uid, department, role } = useGlobalSearchParams();
     const [projectName, setProjectName] = useState("");
     const [projectDescription, setProjectDescription] = useState("");
-    const [projectDeadline, setProjectDeadline] = useState(""); // Added state for deadline
+    const [projectDeadline, setProjectDeadline] = useState(""); // Tilføjet state for deadline
     const [projectPriority, setProjectPriority] = useState("");
     const [editingProject, setEditingProject] = useState(null);
     const [showAdminModal, setShowAdminModal] = useState(false);
@@ -21,6 +22,7 @@ export default function Projects() {
     const handleError = (message) => {
         router.push({ pathname: "/components/error", params: { message } });
     };
+
     const viewProjectDetails = (project) => {
         router.push({
             pathname: "/projectDetails",
@@ -37,77 +39,32 @@ export default function Projects() {
                     owner: uid,
                     department,
                     deadline: projectDeadline,
-                    status: "Not Started",
+                    status: "Ikke startet",
                     priority: projectPriority,
-                    teamMembers: [],
                     createdAt: new Date(),
                 });
 
                 const projectId = docRef.id;
-                console.log("Project created with ID:", projectId);
+                console.log("Projekt oprettet med ID:", projectId);
 
-                // Reset form values
+                // Nulstil formularværdier
                 setProjectName("");
                 setProjectDescription("");
-                setProjectDeadline(""); // Reset deadline
-                setProjectPriority(""); // Reset priority
-                setShowAdminModal(false); // Close the modal after creating project
+                setProjectDeadline(""); // Nulstil deadline
+                setProjectPriority(""); // Nulstil prioritet
+                setShowAdminModal(false); // Luk modalen efter oprettelsen
             } catch (error) {
-                handleError("Failed to create project.");
-                console.error("Error creating project:", error);
+                handleError("Kunne ikke oprette projekt.");
+                console.error("Fejl ved oprettelse af projekt:", error);
             }
         } else {
-            Alert.alert("Error", "All fields must be filled.");
-        }
-    };
-
-    const deleteProject = async (id) => {
-        try {
-            await deleteDoc(doc(database, "projects", id));
-        } catch (error) {
-            Alert.alert("Error", "Failed to delete project.");
-            console.error("Error deleting project:", error);
-        }
-    };
-
-    const editProject = (project) => {
-        setEditingProject(project);
-        setProjectName(project.name);
-        setProjectDescription(project.description);
-        setProjectDeadline(project.deadline); // Populate the deadline field
-        setProjectPriority(project.priority); // Populate the priority field
-        setShowAdminModal(true);
-    };
-
-    const updateProject = async () => {
-        if (projectName && projectDescription && editingProject) {
-            try {
-                const projectRef = doc(database, "projects", editingProject.id);
-                await updateDoc(projectRef, {
-                    name: projectName,
-                    description: projectDescription,
-                    deadline: projectDeadline, // Update deadline
-                    priority: projectPriority, // Update priority
-                    updatedAt: new Date(),
-                });
-                setEditingProject(null);
-                setProjectName("");
-                setProjectDescription("");
-                setProjectDeadline(""); // Reset deadline after update
-                setProjectPriority(""); // Reset priority
-                setShowAdminModal(false);
-            } catch (error) {
-                Alert.alert("Error", "Failed to update project.");
-                console.error("Error updating project:", error);
-            }
-        } else {
-            Alert.alert("Error", "All fields must be filled.");
+            Alert.alert("Fejl", "Alle felter skal udfyldes.");
         }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>Projects - {department}</Text>
+            <Text style={styles.header}>Projekter - {department}</Text>
 
             {role === "admin" && (
                 <TouchableOpacity style={styles.adminIcon} onPress={() => setShowAdminModal(true)}>
@@ -118,39 +75,35 @@ export default function Projects() {
             {loading && (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#173630" />
-                    <Text>Loading Projects...</Text>
+                    <Text>Indlæser projekter...</Text>
                 </View>
             )}
 
-            {error && <Text style={styles.errorText}>Error loading projects.</Text>}
+            {error && <Text style={styles.errorText}>Fejl ved indlæsning af projekter.</Text>}
 
             <ScrollView style={styles.list}>
                 {projects.map((project) => (
-                    <View style={styles.projectItemContainer} key={project.id}>
-                        <TouchableOpacity onPress={() => viewProjectDetails(project)}>
-                            <View style={styles.projectItem}>
-                                <Text style={styles.projectText}>
-                                    {project.name.length > 30 ? `${project.name.substring(0, 30)}...` : project.name}
-                                    {project.description && project.description.length > 0 && (
-                                        <Text style={styles.projectDescription}>
-                                            {" "}-{" "}
-                                            {project.description.length > 30
-                                                ? `${project.description.substring(0, 30)}...`
-                                                : project.description}
-                                        </Text>
-                                    )}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
+                    <TouchableOpacity
+                        key={project.id}
+                        onPress={() => viewProjectDetails(project)} // Gør hele elementet klikbart
+                        style={styles.projectItemContainer}
+                    >
+                        <View style={styles.projectItem}>
+                            <Text style={styles.projectText}>
+                                {project.name.length > 30 ? `${project.name.substring(0, 30)}...` : project.name}
+                                {project.description && project.description.length > 0 && (
+                                    <Text style={styles.projectDescription}>
+                                        {" "}-{" "}
+                                        {project.description.length > 30
+                                            ? `${project.description.substring(0, 30)}...`
+                                            : project.description}
+                                    </Text>
+                                )}
+                            </Text>
+                        </View>
 
                         {role === "admin" && (
                             <>
-                                <TouchableOpacity
-                                    onPress={() => editProject(project)}
-                                    style={styles.editButton}
-                                >
-                                    <Icon name="edit" size={24} color="#000" />
-                                </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() => deleteProject(project.id)}
                                     style={styles.deleteButton}
@@ -159,7 +112,7 @@ export default function Projects() {
                                 </TouchableOpacity>
                             </>
                         )}
-                    </View>
+                    </TouchableOpacity>
                 ))}
             </ScrollView>
 
@@ -169,26 +122,26 @@ export default function Projects() {
                         <View style={styles.modalContent}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Project Name"
+                                placeholder="Projekt Navn"
                                 value={projectName}
                                 onChangeText={setProjectName}
                             />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Project Description"
+                                placeholder="Projekt Beskrivelse"
                                 value={projectDescription}
                                 onChangeText={setProjectDescription}
                             />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Project Deadline"
+                                placeholder="Projekt Deadline"
                                 value={projectDeadline}
                                 onChangeText={setProjectDeadline} // Bind deadline state
                             />
 
                             <TextInput
                                 style={styles.input}
-                                placeholder="Priority (Low, Medium, High)"
+                                placeholder="Prioritet (Lav, Medium, Høj)"
                                 value={projectPriority}
                                 onChangeText={setProjectPriority}
                             />
@@ -197,7 +150,7 @@ export default function Projects() {
                                 style={styles.addButton}
                                 onPress={editingProject ? updateProject : createProject}
                             >
-                                <Text style={styles.addButtonText}>{editingProject ? "Update" : "Create"}</Text>
+                                <Text style={styles.addButtonText}>{editingProject ? "Opdater" : "Opret"}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.cancelButton}
@@ -206,10 +159,10 @@ export default function Projects() {
                                     setEditingProject(null);
                                     setProjectName("");
                                     setProjectDescription("");
-                                    setProjectDeadline(""); // Reset deadline when canceling
+                                    setProjectDeadline(""); // Nulstil deadline når der afbrydes
                                 }}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text style={styles.cancelButtonText}>Annuller</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -217,12 +170,13 @@ export default function Projects() {
             )}
             <View style={styles.bottomBox}>
                 <Text style={styles.boxText}>
-                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
+                    Copyright © 2024 Novozymes A/S, en del af Novonesis Group
                 </Text>
             </View>
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {
