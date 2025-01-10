@@ -1,174 +1,93 @@
-import React, {useState, useEffect} from "react";
-import {
-    StyleSheet,
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    FlatList,
-    Modal,
-} from "react-native";
-import {fetchProjects, fetchTasksForProject} from "./services/dataService";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView } from "react-native";
+import { collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useCollection } from "react-firebase-hooks/firestore";
+import { database } from "./config/firebase";
 import { createTask } from "./task";
-import {useGlobalSearchParams} from "expo-router";
-import {Picker} from "@react-native-picker/picker";
+import { useGlobalSearchParams } from "expo-router";
+import { Picker } from "@react-native-picker/picker";
 
-
-console.log()
 export default function ScrumBoard() {
-    const {uid, department, role} = useGlobalSearchParams();
-    const [project, setProjects] = useState([]);
+    const { department } = useGlobalSearchParams();
+    const [projects, setProjects] = useState([]);
     const [columns, setColumns] = useState([
-        {id: "todo", name: "Backlog", tasks: []},
-        {id: "inprogress", name: "In Progress", tasks: []},
-        {id: "review", name: "Review", tasks: []},
-        {id: "done", name: "Done", tasks: []},
-        {id: "blocked", name: "Blocked", tasks: []},
+        { id: "todo", name: "Backlog", tasks: [] },
+        { id: "inprogress", name: "In Progress", tasks: [] },
+        { id: "review", name: "Review", tasks: [] },
+        { id: "done", name: "Done", tasks: [] },
+        { id: "blocked", name: "Blocked", tasks: [] },
     ]);
     const [selectedProject, setSelectedProject] = useState(null);
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [newTaskDescription, setNewTaskDescription] = useState("");
-    const [estimatedTime, setEstimatedTime] = useState("");
     const [priority, setPriority] = useState("Medium");
     const [modalVisible, setModalVisible] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
     const [projectModalVisible, setProjectModalVisible] = useState(false);
-    const [editingColumnId, setEditingColumnId] = useState(null);
-    const [editedColumnName, setEditedColumnName] = useState("");
-    const {projects, loading, error} = fetchProjects(department);
+    const [updateTaskModalVisible, setUpdateTaskModalVisible] = useState(false); // for update modal
+    const [taskToUpdate, setTaskToUpdate] = useState(null); // holds task to update
+    const [errorMessage, setErrorMessage] = useState("");
 
+    const projectQuery = collection(database, "projects");
+    const [projectSnapshot, loadingProjects, errorProjects] = useCollection(projectQuery);
 
-    useEffect(() => {
-        const loadTasks = async () => {
-            if (selectedProject) {
-                const { tasks, success, error } = await fetchTasksForProject(
-                    selectedProject.id
-                );
-
-                if (success) {
-                    // Assign tasks to appropriate columns
-                    const updatedColumns = columns.map((column) => ({
-                        ...column,
-                        tasks: tasks.filter((task) => task.column === column.id),
-                    }));
-                    setColumns(updatedColumns);
-                } else {
-                    setErrorMessage(error);
-                }
-            }
-        };
-
-        loadTasks();
-    }, [selectedProject, columns]); // Depend on selectedProject and columns
-
+    const tasksQuery =
+        selectedProject && collection(database, `projects/${selectedProject.id}/tasks`);
+    const [taskSnapshot, loadingTasks, errorTasks] = useCollection(tasksQuery);
 
     useEffect(() => {
-        const loadTasks = async () => {
-            if (selectedProject) {
-                const { tasks, success, error } = await fetchTasksForProject(
-                    selectedProject.id
-                );
-
-                if (success) {
-                    console.log("Fetched tasks for project:", tasks); // Check if tasks are fetched
-
-                    // Assign tasks to appropriate columns based on their 'column' field
-                    const updatedColumns = columns.map((column) => ({
-                        ...column,
-                        tasks: tasks.filter((task) => task.column === column.id),
-                    }));
-
-                    // Update the state for columns
-                    setColumns(updatedColumns);
-                } else {
-                    setErrorMessage(error);
-                }
+        if (projectSnapshot) {
+            const projectList = projectSnapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setProjects(projectList);
+            if (!selectedProject && projectList.length > 0) {
+                setSelectedProject(projectList[0]);
             }
-        };
-
-        loadTasks();
-    }, [selectedProject]); // Only depend on selectedProject
-
-    const loadProjectTasks = async (projectId) => {
-        const {success, tasks, error} = await fetchTasksForProject(projectId);
-        if (success) {
-            console.log("Tasks for project:", tasks); // Logs an array of task objects
-        } else {
-            console.error("Error fetching tasks:", error);
         }
-    };
+        if (errorProjects) setErrorMessage("Error fetching projects.");
+    }, [projectSnapshot]);
 
-    const fetchProjectData = async () => {
-        try {
-            const response = await fetchProjects(department);
-            if (response.projects && response.projects.length > 0) {
-                setProjects(response.projects);
-                setSelectedProject(response.projects[0]);  // Default to first project
-            } else {
-                setErrorMessage("No projects found.");
-            }
-        } catch (err) {
-            setErrorMessage("Error fetching projects.");
+    useEffect(() => {
+        if (taskSnapshot && selectedProject) {
+            const taskList = taskSnapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            const updatedColumns = columns.map((column) => ({
+                ...column,
+                tasks: taskList.filter((task) => task.column === column.id),
+            }));
+            setColumns(updatedColumns);
         }
-    };
-
+        if (errorTasks) setErrorMessage("Error fetching tasks.");
+    }, [taskSnapshot, selectedProject]);
 
     const addTask = async () => {
-        if (!selectedProject) {
-            setErrorMessage("Please select a project.");
-            return;
-        }
-
-        if (!newTaskTitle.trim() || !newTaskDescription.trim()) {
-            setErrorMessage("Task title and description are required.");
+        if (!selectedProject || !newTaskTitle.trim() || !newTaskDescription.trim()) {
+            setErrorMessage("Please fill in all required fields.");
             return;
         }
 
         const newTask = {
             name: newTaskTitle,
             description: newTaskDescription,
-            completed: false,
-            column: "todo",  // Default to "To Do" column
-            priority: priority,
-            estimatedTime: estimatedTime,
-            projectId: selectedProject.id, // Ensure you pass the selected project's id
+            column: "todo",
+            priority,
+            projectId: selectedProject.id,
             createdAt: new Date(),
         };
 
-        // Log all inputs here before creating the task
-        console.log("Task Data:", newTask);
-
-        // Create the new task using createTask, passing the newTask object
-        const {success, error} = await createTask(newTask);
-
+        const { success, error } = await createTask(newTask);
         if (success) {
-            // If task is successfully added, update the columns locally
-            const updatedColumns = columns.map((column) =>
-                column.id === "todo"
-                    ? {...column, tasks: [...column.tasks, newTask]}
-                    : column
-            );
-
-            setColumns(updatedColumns);
             setModalVisible(false);
             setNewTaskTitle("");
             setNewTaskDescription("");
-            setEstimatedTime("");
-            setPriority("Medium");
-            setErrorMessage("");
         } else {
             setErrorMessage(error);
         }
     };
 
-
-
-    const handleProjectSelect = (project) => {
-        setSelectedProject(project);
-        setProjectModalVisible(false);
-    };
-
-    // Add new column
     const addColumn = () => {
         const newColumn = {
             id: `new-${columns.length + 1}`,
@@ -178,25 +97,51 @@ export default function ScrumBoard() {
         setColumns([...columns, newColumn]);
     };
 
-    // Edit column name
-    const handleColumnEdit = (columnId) => {
-        setEditingColumnId(columnId);
-        const columnToEdit = columns.find((col) => col.id === columnId);
-        setEditedColumnName(columnToEdit.name);
+    const handleProjectSelect = (project) => {
+        setSelectedProject(project);
+        setProjectModalVisible(false);
     };
 
-    const handleColumnNameChange = () => {
-        if (editedColumnName.trim()) {
-            const updatedColumns = columns.map((column) =>
-                column.id === editingColumnId
-                    ? {...column, name: editedColumnName}
-                    : column
-            );
-            setColumns(updatedColumns);
-            setEditingColumnId(null);
-            setEditedColumnName("");
-        } else {
-            setErrorMessage("Column name cannot be empty.");
+    const handleUpdateTask = async () => {
+        if (!taskToUpdate || !newTaskTitle.trim() || !newTaskDescription.trim()) {
+            setErrorMessage("Please fill in all required fields.");
+            return;
+        }
+
+        const taskRef = doc(database, `projects/${selectedProject.id}/tasks`, taskToUpdate.id);
+        await updateDoc(taskRef, {
+            name: newTaskTitle,
+            description: newTaskDescription,
+            priority: priority,
+        });
+
+        // Clear and close modal
+        setUpdateTaskModalVisible(false);
+        setNewTaskTitle("");
+        setNewTaskDescription("");
+        setTaskToUpdate(null);
+    };
+
+    const openUpdateModal = (task) => {
+        setTaskToUpdate(task);
+        setNewTaskTitle(task.name);
+        setNewTaskDescription(task.description);
+        setPriority(task.priority);
+        setUpdateTaskModalVisible(true);
+    };
+
+    const handleDeleteTask = async () => {
+        if (!taskToUpdate) return;
+
+        try {
+            const taskRef = doc(database, `projects/${selectedProject.id}/tasks`, taskToUpdate.id);
+            await deleteDoc(taskRef); // Delete task from Firestore
+
+            // Close modal and reset task to update
+            setUpdateTaskModalVisible(false);
+            setTaskToUpdate(null);
+        } catch (error) {
+            setErrorMessage("Error deleting task.");
         }
     };
 
@@ -206,135 +151,140 @@ export default function ScrumBoard() {
                 Scrumboard - {selectedProject ? selectedProject.name : "Select a project"}
             </Text>
 
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => setModalVisible(true)} // Open modal to create new task
-            >
+            <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
                 <Text style={styles.buttonText}>Create New Task</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-                style={styles.button}
-                onPress={addColumn}
-            >
+            <TouchableOpacity style={styles.button} onPress={addColumn}>
                 <Text style={styles.buttonText}>Add Column</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => setProjectModalVisible(true)} // Open project selection modal
+                onPress={() => setProjectModalVisible(true)}
             >
                 <Text style={styles.buttonText}>Select Project</Text>
             </TouchableOpacity>
 
-            <View style={styles.board}>
+            <ScrollView
+                horizontal={true}
+                style={styles.board}
+                contentContainerStyle={styles.boardContent}
+            >
                 {columns.map((column) => (
                     <View key={column.id} style={styles.column}>
-                        <Text style={styles.columnHeader}>
-                            {editingColumnId === column.id ? (
-                                <TextInput
-                                    style={styles.input}
-                                    value={editedColumnName}
-                                    onChangeText={setEditedColumnName}
-                                    onSubmitEditing={handleColumnNameChange}
-                                    onBlur={handleColumnNameChange}
-                                    autoFocus
-                                />
-                            ) : (
-                                <TouchableOpacity onPress={() => handleColumnEdit(column.id)}>
-                                    <Text style={styles.columnTitle}>{column.name}</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                style={styles.deleteButton}
-                                onPress={() => deleteColumn(column.id)}
-                            >
-                                <Text style={styles.deleteButtonText}>Delete</Text>
-                            </TouchableOpacity>
-                        </Text>
+                        <Text style={styles.columnHeader}>{column.name}</Text>
                         <FlatList
-                            data={column.tasks} // This should now be populated with tasks from the state
+                            data={column.tasks}
                             renderItem={({ item }) => (
-                                <TouchableOpacity onPress={() => openTaskDetails(item)}>
-                                    <View style={styles.taskCard}>
-                                        <Text style={styles.taskName}>{item.name}</Text>
-                                    </View>
+                                <TouchableOpacity
+                                    style={styles.taskCard}
+                                    onPress={() => openUpdateModal(item)} // Open update modal when clicking on task card
+                                >
+                                    <Text style={styles.taskName}>{item.name}</Text>
                                 </TouchableOpacity>
                             )}
-                            keyExtractor={(item) => item.createdAt.toString()} // Make sure 'createdAt' is present in the task object
+                            keyExtractor={(item) => item.id}
                         />
-
                     </View>
                 ))}
-            </View>
+            </ScrollView>
 
-            {/* Task Creation Modal */}
+
+            {/* Create Task Modal */}
             <Modal visible={modalVisible} animationType="slide">
                 <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Create New Task</Text>
                     <TextInput
-                        style={styles.input}
                         placeholder="Task Title"
                         value={newTaskTitle}
                         onChangeText={setNewTaskTitle}
+                        style={styles.input}
                     />
                     <TextInput
-                        style={styles.input}
                         placeholder="Task Description"
                         value={newTaskDescription}
                         onChangeText={setNewTaskDescription}
-                    />
-                    <TextInput
                         style={styles.input}
-                        placeholder="Estimated Time"
-                        value={estimatedTime}
-                        onChangeText={setEstimatedTime}
                     />
-                    <View style={styles.pickerContainer}>
-                        <Text>Priority</Text>
-                        <Picker
-                            selectedValue={priority}
-                            onValueChange={setPriority}
-                        >
-                            <Picker.Item label="Low" value="Low"/>
-                            <Picker.Item label="Medium" value="Medium"/>
-                            <Picker.Item label="High" value="High"/>
-                        </Picker>
-                    </View>
+                    <Picker selectedValue={priority} onValueChange={setPriority} style={styles.picker}>
+                        <Picker.Item label="Low" value="Low" />
+                        <Picker.Item label="Medium" value="Medium" />
+                        <Picker.Item label="High" value="High" />
+                    </Picker>
 
-                    {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-
+                    {/* Create Task Button */}
                     <TouchableOpacity style={styles.button} onPress={addTask}>
                         <Text style={styles.buttonText}>Create Task</Text>
                     </TouchableOpacity>
 
+                    {/* Cancel Button */}
                     <TouchableOpacity
-                        style={[styles.button, {backgroundColor: "red"}]}
-                        onPress={() => setModalVisible(false)} // Close modal
+                        style={[styles.button, styles.cancelButton]}
+                        onPress={() => setModalVisible(false)} // Close modal when Cancel is pressed
                     >
-                        <Text style={styles.buttonText}>Cancel</Text>
+                        <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
                     </TouchableOpacity>
                 </View>
             </Modal>
 
-            {/* Select Project Modal */}
+            {/* Update Task Modal */}
+            <Modal visible={updateTaskModalVisible} animationType="slide">
+                <View style={styles.modalContent}>
+                    <TextInput
+                        placeholder="Task Title"
+                        value={newTaskTitle}
+                        onChangeText={setNewTaskTitle}
+                        style={styles.input}
+                    />
+                    <TextInput
+                        placeholder="Task Description"
+                        value={newTaskDescription}
+                        onChangeText={setNewTaskDescription}
+                        style={styles.input}
+                    />
+                    <Picker selectedValue={priority} onValueChange={setPriority} style={styles.picker}>
+                        <Picker.Item label="Low" value="Low" />
+                        <Picker.Item label="Medium" value="Medium" />
+                        <Picker.Item label="High" value="High" />
+                    </Picker>
+
+                    <TouchableOpacity style={styles.button} onPress={handleUpdateTask}>
+                        <Text style={styles.buttonText}>Update Task</Text>
+                    </TouchableOpacity>
+
+                    {/* Delete Button */}
+                    <TouchableOpacity
+                        style={[styles.button, styles.deleteButton]}
+                        onPress={handleDeleteTask} // Handle task deletion
+                    >
+                        <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete Task</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.button, styles.cancelButton]}
+                        onPress={() => setUpdateTaskModalVisible(false)} // Close modal when Cancel is pressed
+                    >
+                        <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
             <Modal visible={projectModalVisible} animationType="slide">
                 <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Select a Project</Text>
                     <FlatList
                         data={projects}
-                        renderItem={({item}) => (
-                            <TouchableOpacity onPress={() => handleProjectSelect(item)}>
-                                <View style={styles.projectCard}>
-                                    <Text style={styles.projectName}>{item.name}</Text>
-                                </View>
+                        renderItem={({ item }) => (
+                            <TouchableOpacity onPress={() => handleProjectSelect(item)} style={styles.projectItem}>
+                                <Text style={styles.projectText}>{item.name}</Text>
                             </TouchableOpacity>
                         )}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={{ width: "100%" }} // Sørger for at FlatList-ens indhold fylder hele modalens bredde
                     />
+
                     <TouchableOpacity
-                        style={[styles.button, {backgroundColor: "red", marginTop: 20}]}
-                        onPress={() => setProjectModalVisible(false)} // Close modal
+                        style={styles.button}
+                        onPress={() => setProjectModalVisible(false)}
                     >
                         <Text style={styles.buttonText}>Close</Text>
                     </TouchableOpacity>
@@ -350,7 +300,6 @@ export default function ScrumBoard() {
     );
 }
 
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -364,84 +313,98 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: "bold",
         marginBottom: 15,
+        color: "#173630", // Header text color to match the button color
     },
     button: {
-        backgroundColor: "#173630",
+        backgroundColor: "#173630", // Dark green
         paddingVertical: 8,
         borderRadius: 4,
-        width: "60%",
+        width: "80%", // Ensure buttons have same width
         marginTop: 10,
     },
     buttonText: {
         color: "#fff",
         textAlign: "center",
-        fontSize: 14,
-    },
-    deleteButton: {
-        backgroundColor: "red",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        marginLeft: 10,
-    },
-    deleteButtonText: {
-        color: "#fff",
-        fontSize: 12,
-    },
-    errorText: {
-        color: "red",
-        fontSize: 12,
-    },
-    board: {
-        flexDirection: "row",
-        justifyContent: "space-evenly",
-        width: "100%",
-    },
-    column: {
-        width: "18%",
-        marginHorizontal: 5,
-    },
-    columnHeader: {
         fontSize: 16,
-        fontWeight: "bold",
-        textAlign: "center",
-        marginBottom: 8,
-    },
-    columnTitle: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: "#000",
-    },
-    taskCard: {
-        padding: 8,
-        borderRadius: 4,
-        marginBottom: 8,
-        backgroundColor: "#4CAF50",
-    },
-    taskName: {
-        fontSize: 14,
-        color: "#fff",
     },
     modalContent: {
         flex: 1,
-        padding: 15,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+        backgroundColor: "#fff",
+        width: "90%", // Sikrer at modalens indhold ikke tager mere end 90% af skærmen
+        maxWidth: 400, // Giver en maks bredde for at holde tingene konsistente på større skærme
+        alignSelf: "center",
     },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 8,
+    projectItem: {
+        padding: 15,
+        backgroundColor: "#f1f1f1",
+        marginBottom: 10,
+        borderRadius: 6,
+        width: "100%", // Sørger for at elementerne fylder hele bredden af modalens indhold
     },
     input: {
-        borderWidth: 1,
+        height: 40,
         borderColor: "#ddd",
-        padding: 10,
-        marginBottom: 10,
-        borderRadius: 5,
+        borderWidth: 1,
+        marginBottom: 15,
+        paddingHorizontal: 8,
         width: "100%",
     },
+    columnHeader: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 10,
+        textAlign: "center",
+    },
+    taskCard: {
+        backgroundColor: "#fff",
+        padding: 10,
+        borderRadius: 6,
+        marginBottom: 10,
+    },
+    taskName: {
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    cancelButton: {
+        backgroundColor: "#f8d7da",
+    },
+    cancelButtonText: {
+        color: "#721c24",
+    },
+    deleteButton: {
+        backgroundColor: "#dc3545",
+    },
+    deleteButtonText: {
+        color: "#fff",
+    },
+    picker: {
+        width: "100%",
+        marginBottom: 15,
+    },
+
+    projectText: {
+        fontSize: 16,
+    },
+    board: {
+        flexDirection: "row",
+        marginTop: 20,
+    },
+    column: {
+        padding: 10,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        backgroundColor: "#e9ecef",
+        borderRadius: 8,
+        width: 250, // Fixed width for consistent scrolling
+        marginRight: 10, // Adds spacing between columns
+    },
+
     bottomBox: {
         width: "100%",
-        height: 60,
+        height: 60,  // Reduced height of footer
         backgroundColor: "#173630",
         justifyContent: "center",
         alignItems: "center",
