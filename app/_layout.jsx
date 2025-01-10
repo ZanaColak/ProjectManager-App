@@ -40,14 +40,11 @@ export default function RootLayout() {
             {/* Scrum board Screen */}
             <Stack.Screen name="scrumboard" options={{ title: "Scrum board"}}/>
 
-            {/* Calender Screen */}
-            <Stack.Screen name="calendar" options={{ title: "Kalender"}}/>
-
             {/* Timeline Screen */}
             <Stack.Screen name="timeline" options={{ title: "Tidslinje"}}/>
 
-            {/* Error Screen */}
-            <Stack.Screen name="error" options={{headerShown: false}}/>
+            {/* Team Screen */}
+            <Stack.Screen name="team" options={{ title: "Hold"}}/>
 
         </Stack>
     );
