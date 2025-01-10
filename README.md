@@ -1,83 +1,107 @@
-# Project Manager Application
+# Project Manager App
 
 ## Overview
-This Project Manager App is designed to streamline project management by providing an intuitive interface for managing projects, tasks, teams, and timelines. It enables users to organize workflows effectively and track project progress effortlessly.
+The **Project Manager App** helps you manage projects, tasks, teams, and timelines in one place. Whether you're working solo on a personal project or leading a team, this app makes it easy to track progress and stay organized.
 
-**Live Application**: [https://project-manager-x4m5.onrender.com](https://project-manager-x4m5.onrender.com)  
-_Note: The live version is currently not working. Follow the **CONTRIBUTE** section for a working local version._
+**Live Demo**: [https://project-manager-x4m5.onrender.com](https://project-manager-x4m5.onrender.com)  
+*(Note: The live version is currently not working, but follow the steps below to run it locally.)*
 
 ## Features
-### Core Functionalities
-- **Project Management**: Create, edit, and delete projects with detailed descriptions, start dates, and deadlines.
-- **Task Management**: Manage tasks and subtasks within projects, assign employees, and track progress.
-- **Team Management**: View team members, add new users, assign roles, and manage employee details.
-- **Timeline View**: Visualize project and task durations on an interactive timeline.
 
-### Roles
-- **Admin**: Full control over creating, editing, and deleting projects, tasks, and teams.
-- **Member**: Limited access to view and update tasks assigned to them.
+### Key Features:
+- **Project Management**: Create, edit, and delete projects. Track important details such as start dates, deadlines, and descriptions.
+- **Task Management**: Break down projects into tasks and subtasks. Assign tasks to team members and track progress.
+- **Team Management**: Add, remove, and manage team members. Assign roles (Admin or Member) and keep team details up to date.
+- **Timeline View**: Visualize project and task timelines with an interactive, easy-to-read view.
 
-## Key Endpoints
-The app includes multiple endpoints to access its features:
-- `/login` - Login page for user authentication.
-- `/signup` - Sign up new users.
-- `/dashboard` - Main dashboard displaying projects and options for navigation.
-- `/create_project` - Page to create new projects.
+### Roles:
+- **Admin**: Full access to create, edit, and delete projects, tasks, and manage teams.
+- **Member**: Limited access to view and update only the tasks assigned to them.
 
 ## Pages Overview
-### **Homepage**
-- Users are greeted with a login page where they can either log in or sign up.
-- **Login** requires email and password.
-- **Signup** requires first name, last name, email, and password.
 
-### **Dashboard**
-After login, users are directed to the dashboard with the following options:
-1. **Projects**: Access all projects and perform CRUD operations (Admins only).
-2. **Calendar**: View events and timelines for ongoing projects.
-3. **Team**: Manage team members and roles.
-4. **Scrum Board**: Organize tasks in a Kanban-style board.
+### **Login / Signup**:
+- On the homepage, log in with your email and password, or sign up as a new user.
 
-### **Projects**
-- Users can create new projects with title, description, start date, and deadline.
-- Projects are displayed in a list with options for editing or deleting (Admins only).
+### **Dashboard**:
+- After logging in, you will be directed to the dashboard, where you can:
+  - Manage Projects (Admins only)
+  - View Calendar (See all events and project timelines)
+  - Manage Team Members
+  - Access Scrum Board (A Kanban-style board for tasks)
 
-### **Tasks**
-- Add, edit, and delete tasks within specific projects.
-- Subtasks allow users to break tasks into manageable units, assign employees, and mark them as completed.
+### **Projects**:
+- Create new projects with details like title, description, start date, and deadline.
+- Admin users can edit or delete projects.
 
-### **Teams**
-- Add and manage team members.
-- Assign roles (Admin or Member) and associate users with departments.
+### **Tasks**:
+- Add, edit, and delete tasks within projects.
+- Break tasks into smaller **subtasks**, assign them to team members, and track their completion.
 
-### **Timeline**
-- Interactive timeline to visualize project and task progress.
-- Filters for projects, tasks, and team members.
+### **Teams**:
+- Add and manage team members, assign them roles, and link them to departments.
 
-## Table Views
-### **Projects**
+### **Timeline**:
+- Visualize your project and task timelines with interactive filters for projects, tasks, and team members.
+
+## Tables
+
+### **Projects Table**:
 | Project Title | Start Date | Deadline | Final Date | Estimated Time | Actual Time | Time Evaluation |
 |---------------|------------|----------|------------|----------------|-------------|-----------------|
 
-### **Tasks**
+### **Tasks Table**:
 | Task Title    | Description         |
 |---------------|---------------------|
 
-### **Subtasks**
+### **Subtasks Table**:
 | Subtask Title | Description         | Estimated Time | Actual Time | Assigned Employees |
 |---------------|---------------------|----------------|-------------|--------------------|
 
-### **Team**
+### **Team Table**:
 | First Name  | Last Name  | Email          | Role  | Departments      |
 |-------------|------------|----------------|-------|------------------|
 
-## Installation & Setup
-### Prerequisites
-1. Node.js and npm installed on your local machine.
-2. Firebase project setup (database and authentication).
-3. React Native CLI installed for mobile development.
+---
 
-### Steps to Run Locally
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ZanaColak/ProjectManager-App.git
-   cd ProjectManager-App
+## Getting Started (Run Locally)
+
+Welcome! 🚀 Let’s get the **Project Manager App** running on your local machine. Just follow these steps:
+
+### Prerequisites:
+Before we begin, ensure you have the following tools set up:
+1. **Node.js** and **npm** (Node Package Manager) installed on your system.
+2. **Firebase** project set up for authentication and database management.
+3. For mobile app testing, install **React Native CLI**.
+
+### Installation Steps:
+
+#### 1. Clone the Repository:
+First, clone the repo to your local machine:
+
+git clone https://github.com/ZanaColak/ProjectManager-App.git
+cd ProjectManager-App
+
+2. Install Dependencies:
+Next, install all required dependencies for the app:
+npm install
+
+3. Set Up Firebase:
+Follow the Firebase documentation to create a Firebase project for authentication and database. Connect your Firebase project to the app by adding your Firebase configuration into the app's setup.
+
+4. Run the App:
+For the Web Version:
+To run the app on your browser:
+
+npm start
+This will start the app at http://localhost:3000, and you’ll be able to see it in your browser. 🌐
+
+For React Native (Mobile Version):
+If you want to test the mobile version of the app on an emulator or real device, use the following commands:
+
+For iOS:
+npx react-native run-ios
+
+For Android:
+npx react-native run-android
+Ensure your emulator is running, or connect a physical device via USB. The app will launch on your device. 📱
