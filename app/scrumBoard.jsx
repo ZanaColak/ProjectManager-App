@@ -23,15 +23,16 @@ export default function ScrumBoard() {
     const [priority, setPriority] = useState("Medium");
     const [modalVisible, setModalVisible] = useState(false);
     const [projectModalVisible, setProjectModalVisible] = useState(false);
-    const [updateTaskModalVisible, setUpdateTaskModalVisible] = useState(false); // for update modal
-    const [taskToUpdate, setTaskToUpdate] = useState(null); // holds task to update
+    const [updateTaskModalVisible, setUpdateTaskModalVisible] = useState(false);
+    const [taskToUpdate, setTaskToUpdate] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
+    const [timeSpent, setTimeSpent] = useState("");
+
 
     const projectQuery = collection(database, "projects");
     const [projectSnapshot, loadingProjects, errorProjects] = useCollection(projectQuery);
 
-    const tasksQuery =
-        selectedProject && collection(database, `projects/${selectedProject.id}/tasks`);
+    const tasksQuery = selectedProject && collection(database, `projects/${selectedProject.id}/tasks`);
     const [taskSnapshot, loadingTasks, errorTasks] = useCollection(tasksQuery);
 
     useEffect(() => {
@@ -74,6 +75,7 @@ export default function ScrumBoard() {
             description: newTaskDescription,
             column: "todo",
             priority,
+            timeSpent,
             projectId: selectedProject.id,
             createdAt: new Date(),
         };
@@ -83,6 +85,7 @@ export default function ScrumBoard() {
             setModalVisible(false);
             setNewTaskTitle("");
             setNewTaskDescription("");
+            setTimeSpent(""); // Reset the timeSpent input
         } else {
             setErrorMessage(error);
         }
@@ -102,6 +105,19 @@ export default function ScrumBoard() {
         setProjectModalVisible(false);
     };
 
+    const getTaskCardBackgroundColor = (priority) => {
+        switch(priority) {
+            case "Low":
+                return "lightgreen";  // Green for low priority
+            case "Medium":
+                return "lightyellow"; // Yellow for medium priority
+            case "High":
+                return "lightcoral";  // Red for high priority
+            default:
+                return "white";       // Default color if no priority
+        }
+    };
+
     const handleUpdateTask = async () => {
         if (!taskToUpdate || !newTaskTitle.trim() || !newTaskDescription.trim()) {
             setErrorMessage("Please fill in all required fields.");
@@ -113,6 +129,7 @@ export default function ScrumBoard() {
             name: newTaskTitle,
             description: newTaskDescription,
             priority: priority,
+
         });
 
         // Clear and close modal
@@ -159,18 +176,11 @@ export default function ScrumBoard() {
                 <Text style={styles.buttonText}>Add Column</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => setProjectModalVisible(true)}
-            >
+            <TouchableOpacity style={styles.button} onPress={() => setProjectModalVisible(true)}>
                 <Text style={styles.buttonText}>Select Project</Text>
             </TouchableOpacity>
 
-            <ScrollView
-                horizontal={true}
-                style={styles.board}
-                contentContainerStyle={styles.boardContent}
-            >
+            <ScrollView horizontal={true} style={styles.board} contentContainerStyle={styles.boardContent}>
                 {columns.map((column) => (
                     <View key={column.id} style={styles.column}>
                         <Text style={styles.columnHeader}>{column.name}</Text>
@@ -178,7 +188,7 @@ export default function ScrumBoard() {
                             data={column.tasks}
                             renderItem={({ item }) => (
                                 <TouchableOpacity
-                                    style={styles.taskCard}
+                                    style={[styles.taskCard, { backgroundColor: getTaskCardBackgroundColor(item.priority) }]}
                                     onPress={() => openUpdateModal(item)} // Open update modal when clicking on task card
                                 >
                                     <Text style={styles.taskName}>{item.name}</Text>
@@ -189,7 +199,6 @@ export default function ScrumBoard() {
                     </View>
                 ))}
             </ScrollView>
-
 
             {/* Create Task Modal */}
             <Modal visible={modalVisible} animationType="slide">
@@ -211,8 +220,12 @@ export default function ScrumBoard() {
                         <Picker.Item label="Medium" value="Medium" />
                         <Picker.Item label="High" value="High" />
                     </Picker>
-
-                    {/* Create Task Button */}
+                    <TextInput
+                        placeholder="Time Spent (e.g., '1 hour', '30 minutes')"
+                        value={timeSpent}
+                        onChangeText={setTimeSpent}
+                        style={styles.input}
+                    />
                     <TouchableOpacity style={styles.button} onPress={addTask}>
                         <Text style={styles.buttonText}>Create Task</Text>
                     </TouchableOpacity>
@@ -242,11 +255,23 @@ export default function ScrumBoard() {
                         onChangeText={setNewTaskDescription}
                         style={styles.input}
                     />
-                    <Picker selectedValue={priority} onValueChange={setPriority} style={styles.picker}>
-                        <Picker.Item label="Low" value="Low" />
-                        <Picker.Item label="Medium" value="Medium" />
-                        <Picker.Item label="High" value="High" />
+                    <Picker
+                        selectedValue={priority}
+                        onValueChange={setPriority}
+                        style={[styles.picker]}
+                    >
+                        <Picker.Item label="Low" value="Low" style={{ color: 'green' }} />
+                        <Picker.Item label="Medium" value="Medium" style={{ color: 'orange' }} />
+                        <Picker.Item label="High" value="High" style={{ color: 'red' }} />
                     </Picker>
+
+
+                    <TextInput
+                        placeholder="Time Spent (e.g., '1 hour', '30 minutes')"
+                        value={timeSpent}
+                        onChangeText={setTimeSpent}
+                        style={styles.input}
+                    />
 
                     <TouchableOpacity style={styles.button} onPress={handleUpdateTask}>
                         <Text style={styles.buttonText}>Update Task</Text>
@@ -255,7 +280,7 @@ export default function ScrumBoard() {
                     {/* Delete Button */}
                     <TouchableOpacity
                         style={[styles.button, styles.deleteButton]}
-                        onPress={handleDeleteTask} // Handle task deletion
+                        onPress={handleDeleteTask}
                     >
                         <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete Task</Text>
                     </TouchableOpacity>
@@ -269,6 +294,7 @@ export default function ScrumBoard() {
                 </View>
             </Modal>
 
+            {/* Project Selection Modal */}
             <Modal visible={projectModalVisible} animationType="slide">
                 <View style={styles.modalContent}>
                     <FlatList
@@ -279,7 +305,6 @@ export default function ScrumBoard() {
                             </TouchableOpacity>
                         )}
                         keyExtractor={(item) => item.id}
-                        contentContainerStyle={{ width: "100%" }} // Sørger for at FlatList-ens indhold fylder hele modalens bredde
                     />
 
                     <TouchableOpacity
@@ -290,12 +315,6 @@ export default function ScrumBoard() {
                     </TouchableOpacity>
                 </View>
             </Modal>
-
-            <View style={styles.bottomBox}>
-                <Text style={styles.boxText}>
-                    Copyright © 2024 Novozymes A/S, part of Novonesis Group
-                </Text>
-            </View>
         </View>
     );
 }
@@ -333,88 +352,68 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 20,
         backgroundColor: "#fff",
-        width: "90%", // Sikrer at modalens indhold ikke tager mere end 90% af skærmen
-        maxWidth: 400, // Giver en maks bredde for at holde tingene konsistente på større skærme
-        alignSelf: "center",
-    },
-    projectItem: {
-        padding: 15,
-        backgroundColor: "#f1f1f1",
-        marginBottom: 10,
-        borderRadius: 6,
-        width: "100%", // Sørger for at elementerne fylder hele bredden af modalens indhold
+        width: "90%", // Ensure modal content does not exceed screen width
+        maxWidth: 400, // Provide a max width to keep the modal consistent on larger screens
+        borderRadius: 10,
     },
     input: {
-        height: 40,
-        borderColor: "#ddd",
         borderWidth: 1,
-        marginBottom: 15,
-        paddingHorizontal: 8,
-        width: "100%",
-    },
-    columnHeader: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 10,
-        textAlign: "center",
-    },
-    taskCard: {
-        backgroundColor: "#fff",
+        borderColor: "#ccc",
         padding: 10,
-        borderRadius: 6,
-        marginBottom: 10,
-    },
-    taskName: {
-        fontSize: 16,
-        fontWeight: "bold",
-    },
-    cancelButton: {
-        backgroundColor: "#f8d7da",
-    },
-    cancelButtonText: {
-        color: "#721c24",
-    },
-    deleteButton: {
-        backgroundColor: "#dc3545",
-    },
-    deleteButtonText: {
-        color: "#fff",
+        width: "100%",
+        marginVertical: 8,
+        borderRadius: 4,
     },
     picker: {
         width: "100%",
-        marginBottom: 15,
-    },
-
-    projectText: {
-        fontSize: 16,
+        height: 50,
+        marginVertical: 8,
     },
     board: {
         flexDirection: "row",
         marginTop: 20,
     },
+    boardContent: {
+        flexDirection: "row",
+    },
     column: {
-        padding: 10,
+        width: 250,
+        marginRight: 15,
+    },
+    columnHeader: {
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 10,
+    },
+    taskCard: {
+        backgroundColor: "#fff",
         borderWidth: 1,
         borderColor: "#ddd",
-        backgroundColor: "#e9ecef",
-        borderRadius: 8,
-        width: 250, // Fixed width for consistent scrolling
-        marginRight: 10, // Adds spacing between columns
+        marginBottom: 10,
+        padding: 10,
+        borderRadius: 4,
     },
-
-    bottomBox: {
-        width: "100%",
-        height: 60,  // Reduced height of footer
-        backgroundColor: "#173630",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "absolute",
-        bottom: 0,
+    taskName: {
+        fontSize: 16,
     },
-    boxText: {
+    projectItem: {
+        padding: 15,
+    },
+    projectText: {
+        fontSize: 18,
+    },
+    cancelButton: {
+        backgroundColor: "#f8f9fa",
+        borderWidth: 1,
+        borderColor: "#ccc",
+    },
+    cancelButtonText: {
+        color: "#173630",
+    },
+    deleteButton: {
+        backgroundColor: "#e74c3c",
+    },
+    deleteButtonText: {
         color: "#fff",
-        fontSize: 14,
-        lineHeight: 16,
-        textAlign: "center",
     },
 });

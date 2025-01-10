@@ -9,10 +9,7 @@ import { database } from "./config/firebase";
 export const createTask = async (newTask) => {
     if (newTask && newTask.projectId && newTask.name && newTask.description) {
         try {
-            // Reference to the specific project document
             const projectRef = doc(database, "projects", newTask.projectId);
-
-            // Reference to the "tasks" subcollection within the project document
             const tasksRef = collection(projectRef, "tasks");
 
             // Add the new task to the "tasks" subcollection
@@ -24,6 +21,7 @@ export const createTask = async (newTask) => {
                 status: "Not Started",
                 priority: newTask.priority,
                 createdAt: new Date(),
+                timeSpent: newTask.timeSpent,  // Add timeSpent as a string
             });
 
             console.log("Task created with ID:", docRef.id);
@@ -90,12 +88,15 @@ export default function Tasks() {
                     deadline: taskDeadline,
                     priority: taskPriority,
                     updatedAt: new Date(),
+                    timeSpent: taskTimeSpent,  // Add timeSpent as a string
                 });
+
                 setEditingTask(null);
                 setTaskName("");
                 setTaskDescription("");
                 setTaskDeadline("");
                 setTaskPriority("");
+                setTaskTimeSpent("");  // Reset timeSpent after task update
                 setShowAdminModal(false);
             } catch (error) {
                 Alert.alert("Error", "Failed to update task.");
@@ -186,17 +187,29 @@ export default function Tasks() {
                                 value={taskDeadline}
                                 onChangeText={setTaskDeadline}
                             />
-
                             <TextInput
                                 style={styles.input}
                                 placeholder="Priority (Low, Medium, High)"
                                 value={taskPriority}
                                 onChangeText={setTaskPriority}
                             />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Time Spent (in hours or minutes)"
+                                value={taskTimeSpent}
+                                onChangeText={setTaskTimeSpent}
+                            />
 
                             <TouchableOpacity
                                 style={styles.addButton}
-                                onPress={editingTask ? updateTask : createTask}
+                                onPress={editingTask ? updateTask : () => createTask({
+                                    name: taskName,
+                                    description: taskDescription,
+                                    projectId,
+                                    deadline: taskDeadline,
+                                    priority: taskPriority,
+                                    timeSpent: taskTimeSpent,  // Pass timeSpent to createTask
+                                })}
                             >
                                 <Text style={styles.addButtonText}>{editingTask ? "Update" : "Create"}</Text>
                             </TouchableOpacity>
@@ -209,6 +222,7 @@ export default function Tasks() {
                                     setTaskDescription("");
                                     setTaskDeadline("");
                                     setTaskPriority("");
+                                    setTaskTimeSpent("");  // Reset timeSpent field
                                 }}
                             >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -216,6 +230,7 @@ export default function Tasks() {
                         </View>
                     </View>
                 </Modal>
+
             )}
             <View style={styles.bottomBox}>
                 <Text style={styles.boxText}>
