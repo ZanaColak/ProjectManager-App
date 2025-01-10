@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { useGlobalSearchParams } from "expo-router";
-import { doc, updateDoc } from "firebase/firestore";
 import { fetchDepartments } from "./services/dataService";
-import { database } from "./config/firebase";
+import { updateUserDetails } from "./services/teamService";
 
 export default function TeamDetails() {
     const { id, email, role, firstName, lastName, departments } = useGlobalSearchParams();
@@ -20,40 +19,36 @@ export default function TeamDetails() {
         console.error("Error fetching departments:", departmentError);
     }
 
-    const saveUserDetails = async (field, value) => {
-        try {
-            const userRef = doc(database, "users", id);
-            const updatedValue = field === "departments" ? value : { [field]: value };
-            await updateDoc(userRef, field === "departments" ? { departments: value } : updatedValue);
-            Alert.alert("Success", `${field} updated successfully.`);
-        } catch (error) {
-            Alert.alert("Error", `Failed to update ${field}.`);
-            console.error(`Error updating ${field}:`, error);
-        }
-    };
-
-
-    const toggleEdit = (field) => {
+    const toggleEdit = async (field) => {
         if (editingField === field) {
+            let value;
+
             switch (field) {
                 case "email":
-                    saveUserDetails("email", userEmail);
+                    value = userEmail;
                     break;
                 case "firstName":
-                    saveUserDetails("firstName", userFirstName);
+                    value = userFirstName;
                     break;
                 case "lastName":
-                    saveUserDetails("lastName", userLastName);
+                    value = userLastName;
                     break;
                 case "departments":
-                    saveUserDetails("departments", userDepartments.join(", "));
+                    value = userDepartments;
                     break;
                 case "role":
-                    saveUserDetails("role", userRole);
+                    value = userRole;
                     break;
                 default:
-                    break;
+                    console.error("Invalid field:", field);
+                    return;
             }
+
+            await updateUserDetails(id, field, value,
+                () => console.log(`${field} updated successfully`),
+                (error) => console.error(`Failed to update ${field}:`, error)
+            );
+
             setEditingField("");
         } else {
             setEditingField(field);
@@ -125,18 +120,14 @@ export default function TeamDetails() {
                     {availableDepartments.map((dep) => (
                         <TouchableOpacity
                             key={dep.id}
-                            style={
-                                userDepartments.includes(dep.name)
-                                    ? styles.selectedDepartment
-                                    : styles.unselectedDepartment
-                            }
+                            style={userDepartments.includes(dep.name) ? styles.selectedDepartment : styles.unselectedDepartment}
                             onPress={() => {
                                 const updatedDepartments = userDepartments.includes(dep.name)
                                     ? userDepartments.filter((d) => d !== dep.name)
                                     : [...userDepartments, dep.name];
 
                                 setUserDepartments(updatedDepartments);
-                                saveUserDetails("departments", updatedDepartments);
+                                updateUserDetails(id, "departments", updatedDepartments);
                             }}
                         >
                             <Text style={styles.departmentText}>{dep.name}</Text>
@@ -145,31 +136,24 @@ export default function TeamDetails() {
                 </ScrollView>
             </View>
 
-
             {/* Role */}
             <View style={styles.detailContainer}>
                 <Text style={styles.label}>Role:</Text>
                 <View style={styles.roleOptions}>
                     <TouchableOpacity
-                        style={[
-                            styles.roleOption,
-                            userRole === "admin" && styles.selectedRole,
-                        ]}
+                        style={[styles.roleOption, userRole === "admin" && styles.selectedRole]}
                         onPress={() => {
                             setUserRole("admin");
-                            saveUserDetails("role", "admin");
+                            updateUserDetails(id, "role", "admin");
                         }}
                     >
                         <Text style={styles.roleText}>Admin</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[
-                            styles.roleOption,
-                            userRole === "member" && styles.selectedRole,
-                        ]}
+                        style={[styles.roleOption, userRole === "member" && styles.selectedRole]}
                         onPress={() => {
                             setUserRole("member");
-                            saveUserDetails("role", "member");
+                            updateUserDetails(id, "role", "member");
                         }}
                     >
                         <Text style={styles.roleText}>Member</Text>

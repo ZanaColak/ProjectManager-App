@@ -1,6 +1,6 @@
 import { auth, database } from "../config/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, deleteDoc } from "firebase/firestore";
+import {doc, setDoc, deleteDoc, updateDoc} from "firebase/firestore";
 import { showAlert } from "../components/utill";
 
 export const createUser = async (userData, onSuccess, onError) => {
@@ -43,5 +43,21 @@ export const deleteUser = async (id, onSuccess, onError) => {
         console.error("Error deleting user:", error);
         onError?.(error.message);
         showAlert("Error", `Failed to delete user: ${error.message}`);
+    }
+};
+
+export const updateUserDetails = async (userId, field, value, onSuccess, onError) => {
+    try {
+        const userRef = doc(database, "users", userId);
+        const updateData = field === "departments" ? { departments: value } : { [field]: value };
+
+        await updateDoc(userRef, updateData);
+
+        if (onSuccess) onSuccess();
+        showAlert("Success", `${field} updated successfully.`);
+    } catch (error) {
+        console.error(`Error updating ${field}:`, error);
+        if (onError) onError(error.message);
+        showAlert("Error", `Failed to update ${field}: ${error.message}`);
     }
 };
