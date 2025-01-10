@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView } from "react-native";
+import React, { useState, useEffect} from "react";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView, TouchableWithoutFeedback } from "react-native";
 import { collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { database } from "./config/firebase";
 import { createTask } from "./task";
 import { useGlobalSearchParams } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
+import { Keyboard } from 'react-native';
+
 
 export default function ScrumBoard() {
     const { department } = useGlobalSearchParams();
@@ -27,6 +29,8 @@ export default function ScrumBoard() {
     const [taskToUpdate, setTaskToUpdate] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
     const [timeSpent, setTimeSpent] = useState("");
+    const [editingColumn, setEditingColumn] = useState(null); // Holder styr på hvilken kolonne der er ved at blive redigeret
+    const [newColumnName, setNewColumnName] = useState(""); // Holder det nye kolonnenavn
 
 
     const projectQuery = collection(database, "projects");
@@ -48,6 +52,22 @@ export default function ScrumBoard() {
         }
         if (errorProjects) setErrorMessage("Error fetching projects.");
     }, [projectSnapshot]);
+
+    const handleColumnHeaderClick = (column) => {
+        setEditingColumn(column.id); // Angiver den kolonne der skal redigeres
+        setNewColumnName(column.name); // Sætter kolonnens nuværende navn som standard værdi i inputfeltet
+    };
+
+    const handleColumnNameChange = () => {
+        const updatedColumns = columns.map((column) => {
+            if (column.id === editingColumn) {
+                return { ...column, name: newColumnName };
+            }
+            return column;
+        });
+        setColumns(updatedColumns); // Opdaterer kolonnerne med det nye navn
+        setEditingColumn(null); // Lukker redigeringsfeltet
+    };
 
 
     useEffect(() => {
@@ -183,23 +203,45 @@ export default function ScrumBoard() {
                 <Text style={styles.buttonText}>Select Project</Text>
             </TouchableOpacity>
 
+            {/* Scrollable board for columns */}
             <ScrollView horizontal={true} style={styles.board} contentContainerStyle={styles.boardContent}>
                 {columns.map((column) => (
-                    <View key={column.id} style={styles.column}>
-                        <Text style={styles.columnHeader}>{column.name}</Text>
-                        <FlatList
-                            data={column.tasks}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[styles.taskCard, { backgroundColor: getTaskCardBackgroundColor(item.priority) }]}
-                                    onPress={() => openUpdateModal(item)} // Open update modal when clicking on task card
-                                >
-                                    <Text style={styles.taskName}>{item.name}</Text>
+                    <TouchableWithoutFeedback
+                        key={column.id}
+                        onPress={() => {
+                            if (editingColumn !== null) {
+                                setEditingColumn(null); // Close editing mode if clicking outside
+                                Keyboard.dismiss(); // Hide the keyboard
+                            }
+                        }}
+                    >
+                        <View style={styles.column}>
+                            {editingColumn === column.id ? (
+                                <TextInput
+                                    value={newColumnName}
+                                    onChangeText={setNewColumnName}
+                                    style={styles.input}
+                                    onSubmitEditing={handleColumnNameChange}
+                                />
+                            ) : (
+                                <TouchableOpacity onPress={() => handleColumnHeaderClick(column)}>
+                                    <Text style={styles.columnHeader}>{column.name}</Text>
                                 </TouchableOpacity>
                             )}
-                            keyExtractor={(item) => item.id}
-                        />
-                    </View>
+                            <FlatList
+                                data={column.tasks}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[styles.taskCard, { backgroundColor: getTaskCardBackgroundColor(item.priority) }]}
+                                        onPress={() => openUpdateModal(item)} // Open update modal when clicking on task card
+                                    >
+                                        <Text style={styles.taskName}>{item.name}</Text>
+                                    </TouchableOpacity>
+                                )}
+                                keyExtractor={(item) => item.id}
+                            />
+                        </View>
+                    </TouchableWithoutFeedback>
                 ))}
             </ScrollView>
 
@@ -378,14 +420,7 @@ const styles = StyleSheet.create({
         maxWidth: 400, // Provide a max width to keep the modal consistent on larger screens
         borderRadius: 10,
     },
-    input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        padding: 10,
-        width: "100%",
-        marginVertical: 8,
-        borderRadius: 4,
-    },
+
     picker: {
         width: "100%",
         height: 50,
@@ -401,11 +436,6 @@ const styles = StyleSheet.create({
     column: {
         width: 250,
         marginRight: 15,
-    },
-    columnHeader: {
-        fontWeight: "bold",
-        textAlign: "center",
-        marginBottom: 10,
     },
     taskCard: {
         backgroundColor: "#fff",
@@ -438,6 +468,22 @@ const styles = StyleSheet.create({
     deleteButtonText: {
         color: "#fff",
     },
+    input: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        padding: 10,
+        width: "100%",
+        marginVertical: 8,
+        borderRadius: 4,
+    },
+    columnHeader: {
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 10,
+        fontSize: 18,
+        color: "#173630",
+    },
+
     bottomBox: {
         width: "100%",
         height: 60,
