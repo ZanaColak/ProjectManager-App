@@ -3,7 +3,7 @@ import {ActionSheetIOS, ActivityIndicator, Platform, StyleSheet, Text, Touchable
 import {useGlobalSearchParams, useRouter} from "expo-router";
 import {fetchDepartmentsForUser} from "./services/dataService";
 import {Picker} from "@react-native-picker/picker";
-import {showAlert} from "./components/utill";
+import {showAlert} from "./config/utill";
 
 export default function Department() {
     const [selectedDepartment, setSelectedDepartment] = useState("");

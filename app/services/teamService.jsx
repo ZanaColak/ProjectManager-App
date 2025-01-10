@@ -1,7 +1,7 @@
 import { auth, database } from "../config/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
-import { showAlert } from "../components/utill";
+import { showAlert } from "../config/utill";
 
 export const createUser = async (userData, onSuccess, onError) => {
     const { firstName, lastName, email, password, userRole, userDepartments } = userData;

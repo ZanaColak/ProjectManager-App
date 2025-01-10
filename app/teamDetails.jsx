@@ -3,7 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Platfo
 import { useGlobalSearchParams } from "expo-router";
 import { fetchDepartments } from "./services/dataService";
 import { updateUserDetails } from "./services/teamService";
-import { showAlert } from "./components/utill";
+import { showAlert } from "./config/utill";
 
 export default function TeamDetails() {
     const { id, email, role, firstName, lastName, departments } = useGlobalSearchParams();
