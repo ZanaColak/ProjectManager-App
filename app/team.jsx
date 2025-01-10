@@ -62,7 +62,7 @@ export default function Team() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>Team - {department}</Text>
+            <Text style={styles.header}>Hold - {department}</Text>
             {loading && (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#173630" />
@@ -72,7 +72,7 @@ export default function Team() {
             {error && <Text style={styles.errorText}>Error loading users.</Text>}
 
             <ScrollView style={styles.list}>
-                <Text style={styles.sectionHeader}>Admins</Text>
+                <Text style={styles.sectionHeader}>Administrator</Text>
                 {admins.map((user) => (
                     <TouchableOpacity key={user.id} onPress={() => navigateToDetails(user)}>
                         <View style={styles.userItemContainer}>
@@ -91,7 +91,7 @@ export default function Team() {
                     </TouchableOpacity>
                 ))}
 
-                <Text style={styles.sectionHeader}>Members</Text>
+                <Text style={styles.sectionHeader}>Bruger</Text>
                 {members.map((user) => (
                     <TouchableOpacity key={user.id} onPress={() => navigateToDetails(user)}>
                         <View style={styles.userItemContainer}>

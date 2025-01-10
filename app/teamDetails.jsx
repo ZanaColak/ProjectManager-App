@@ -155,7 +155,7 @@ export default function TeamDetails() {
                             updateUserDetails(id, "role", "member");
                         }}
                     >
-                        <Text style={[styles.roleText, userRole === "member" && styles.selectedRoleText]}>Medlem</Text>
+                        <Text style={[styles.roleText, userRole === "member" && styles.selectedRoleText]}>Bruger</Text>
                     </TouchableOpacity>
                 </View>
             </View>
